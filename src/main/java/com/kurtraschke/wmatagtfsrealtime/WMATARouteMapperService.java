@@ -31,6 +31,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.inject.Singleton;
 import org.onebusaway.transit_data.model.RouteBean;
 import org.slf4j.LoggerFactory;
@@ -49,7 +50,9 @@ public class WMATARouteMapperService {
     private List<WMATARoute> wmataRoutes;
     private Map<String, String> routeMap = new HashMap<String, String>();
     private Map<String, String> filteredRouteMap = new HashMap<String, String>();
-    private final String AGENCY_ID = "3030-2";
+    @Inject
+    @Named("WMATA.agencyID")
+    private String AGENCY_ID;
     private final String[] BAD_ROUTES = new String[]{"B99", "F99", "F99c", "F99v1",
         "L99", "P99", "PATBL", "PATFM", "PATLA", "PATMG", "PATNO",
         "PATRO", "PATSH", "PATSO", "PATWN", "PATWO", "SH99", "W99",

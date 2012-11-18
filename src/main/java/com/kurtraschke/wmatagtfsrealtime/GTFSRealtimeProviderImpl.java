@@ -33,6 +33,7 @@ import com.google.transit.realtime.GtfsRealtime.VehiclePosition;
 import com.kurtraschke.wmatagtfsrealtime.api.WMATAAlert;
 import com.kurtraschke.wmatagtfsrealtime.api.WMATABusPosition;
 import java.io.IOException;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
@@ -42,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.inject.Singleton;
 import org.onebusaway.transit_data.model.ListBean;
 import org.onebusaway.transit_data.model.RouteBean;
@@ -79,6 +81,9 @@ public class GTFSRealtimeProviderImpl {
     private WMATARouteMapperService _routeMapperService;
     private WMATATripMapperService _tripMapperService;
     private TransitDataServiceService _tds;
+    @Inject
+    @Named("WMATA.agencyID")
+    private String AGENCY_ID;
     /**
      * How often vehicle data will be downloaded, in seconds.
      */
@@ -100,7 +105,7 @@ public class GTFSRealtimeProviderImpl {
     }
 
     @Inject
-    public void setWMATATripMapperSerivice(WMATATripMapperService tripMapperService) {
+    public void setWMATATripMapperService(WMATATripMapperService tripMapperService) {
         _tripMapperService = tripMapperService;
     }
 
@@ -127,7 +132,7 @@ public class GTFSRealtimeProviderImpl {
         _log.info("starting GTFS-realtime service");
         _executor = Executors.newSingleThreadScheduledExecutor();
         _executor.scheduleWithFixedDelay(new VehiclesRefreshTask(), 0,
-         _refreshInterval, TimeUnit.SECONDS);
+                _refreshInterval, TimeUnit.SECONDS);
         _executor.scheduleWithFixedDelay(new AlertsRefreshTask(), 0,
                 2 * _refreshInterval, TimeUnit.SECONDS);
     }
@@ -186,19 +191,22 @@ public class GTFSRealtimeProviderImpl {
             gtfsRouteID = _routeMapperService.getRouteMap().get(route);
 
             if (gtfsRouteID != null) {
-                Date serviceDate = new GregorianCalendar(2012, 11 - 1, 17).getTime();
+                GregorianCalendar serviceDate = new GregorianCalendar();
+                serviceDate.set(Calendar.HOUR_OF_DAY, 0);
+                serviceDate.set(Calendar.MINUTE, 0);
+                serviceDate.set(Calendar.SECOND, 0);
+                serviceDate.set(Calendar.MILLISECOND, 0);
 
-                gtfsTripID = _tripMapperService.getTripMapping(serviceDate, trip, route);
 
-                System.out.println("Mapped WMATA trip " + trip + " to GTFS trip " + gtfsTripID);
+                gtfsTripID = _tripMapperService.getTripMapping(serviceDate.getTime(), trip, route);
+
+                _log.info("Mapped WMATA trip " + trip + " to GTFS trip " + gtfsTripID);
             }
 
             /**
              * We construct a TripDescriptor and VehicleDescriptor, which will
              * be used in both trip updates and vehicle positions to identify
-             * the trip and vehicle. Ideally, we would have a trip id to use for
-             * the trip descriptor, but the SEPTA api doesn't include it, so we
-             * settle for a route id instead.
+             * the trip and vehicle.
              */
             TripDescriptor.Builder tripDescriptor = TripDescriptor.newBuilder();
             if (gtfsRouteID != null) {
@@ -213,7 +221,7 @@ public class GTFSRealtimeProviderImpl {
 
             /**
              * To construct our TripUpdate, we create a stop-time arrival event
-             * for the next stop for the vehicle, with the specified arrival
+             * for the last stop for the vehicle, with the specified arrival
              * delay. We add the stop-time update to a TripUpdate builder, along
              * with the trip and vehicle descriptors.
              */
@@ -272,6 +280,7 @@ public class GTFSRealtimeProviderImpl {
         _log.info("vehicles extracted: " + tripUpdates.getEntityCount());
     }
 
+    /* FIXME: cache this so we don't thrash the TDS too much. */
     private String getLastStopForTrip(String tripID) {
         TripDetailsQueryBean tdqb = new TripDetailsQueryBean();
         tdqb.setTripId(tripID);
@@ -319,8 +328,8 @@ public class GTFSRealtimeProviderImpl {
             }
         }
 
-        List<RouteBean> gtfsRoutes = _tds.getService().getRoutesForAgencyId("3030-2").getList();
-
+        /* FIXME: cache these mappings to avoid thrashing the TDS. */
+        List<RouteBean> gtfsRoutes = _tds.getService().getRoutesForAgencyId(AGENCY_ID).getList();
 
         for (WMATAAlert railAlert : railAlerts) {
 
@@ -332,17 +341,17 @@ public class GTFSRealtimeProviderImpl {
 
             for (final String route : routes) {
                 EntitySelector.Builder entity = EntitySelector.newBuilder();
-                
+
                 Optional<RouteBean> matchedRoute = Iterables.tryFind(gtfsRoutes, new Predicate<RouteBean>() {
-                        public boolean apply(RouteBean gr) {
-                            if (gr.getShortName() != null) {
-                                return gr.getShortName().equalsIgnoreCase(route);
-                            } else {
-                                return false;
-                            }
+                    public boolean apply(RouteBean gr) {
+                        if (gr.getShortName() != null) {
+                            return gr.getShortName().equalsIgnoreCase(route);
+                        } else {
+                            return false;
                         }
-                    });
-                
+                    }
+                });
+
                 if (matchedRoute.isPresent()) {
                     entity.setRouteId(stripID(matchedRoute.get().getId()));
                     alert.addInformedEntity(entity);
