@@ -83,6 +83,12 @@
             <artifactId>rocoto</artifactId>
             <version>6.2</version>
         </dependency>
+        <dependency>
+            <groupId>net.sf.ehcache</groupId>
+            <artifactId>ehcache</artifactId>
+            <version>2.6.2</version>
+            <type>pom</type>
+        </dependency>
     </dependencies>
 
     
@@ -102,7 +108,16 @@
                             <mainClass>com.kurtraschke.wmatagtfsrealtime.WMATARealtimeMain</mainClass>
                         </manifest>
                     </archive>
+                    <resources>
+                        <resource>
+                            <directory>src/main/resources</directory>
+                            <includes>
+                                <include>**/ehcache.xml</include>
+                            </includes>
+                        </resource>
+                    </resources>
                 </configuration>
+        
         
             </plugin>
             <plugin>

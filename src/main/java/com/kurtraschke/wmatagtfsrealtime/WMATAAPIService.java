@@ -2,17 +2,17 @@
  * Copyright (C) 2012 OneBusAway.
  * Copyright (C) 2012 Kurt Raschke
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.kurtraschke.wmatagtfsrealtime;
 
@@ -23,25 +23,17 @@ import com.kurtraschke.wmatagtfsrealtime.api.WMATARouteScheduleInfo;
 import com.kurtraschke.wmatagtfsrealtime.api.WMATAStop;
 import com.kurtraschke.wmatagtfsrealtime.api.WMATAStopTime;
 import com.kurtraschke.wmatagtfsrealtime.api.WMATATrip;
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.UnsupportedEncodingException;
+import java.io.Serializable;
 import java.net.URLEncoder;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
-import org.apache.commons.codec.binary.Hex;
+import net.sf.ehcache.Cache;
+import net.sf.ehcache.Element;
 import org.apache.commons.digester.Digester;
 import org.xml.sax.SAXException;
 
@@ -56,14 +48,18 @@ public class WMATAAPIService {
     @Inject
     @Named( "WMATA.key")
     private String API_KEY;
-    @Inject
-    @Named( "cache.directory")
-    private String CACHE_DIRECTORY;
+    private Cache _cache;
     private Digester _stopDigester = getStopDigester();
     private Digester _routeDigester = getRouteDigester();
     private Digester _routeScheduleDigester = getRouteScheduleDigester();
     private Digester _busPositionDigester = getBusPositionDigester();
     private Digester _alertDigester = getAlertDigester();
+
+    @Inject
+    public void setCache(@Named("caches.api") Cache cache) {
+        _cache = cache;
+
+    }
 
     private Digester getStopDigester() {
         Digester stopDigester = new Digester();
@@ -240,43 +236,17 @@ public class WMATAAPIService {
 
     private Object digestUrl(String url, boolean cache, Digester digester) throws IOException,
             SAXException {
-        File cacheFile = getCacheFileForUrl(url);
-        if (cache && cacheFile != null && cacheFile.exists()) {
-            ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(
-                    new FileInputStream(cacheFile)));
-            try {
-                Object object = ois.readObject();
-                ois.close();
-                return object;
-            } catch (ClassNotFoundException ex) {
-                throw new IllegalStateException(ex);
-            }
+
+        if (cache && _cache.isKeyInCache(url)) {
+            Element e = _cache.get(url);
+            return e.getObjectValue();
+
         }
         InputStream in = _downloader.openUrl(url);
-        Object result = digester.parse(in);
-        if (cache && cacheFile != null) {
-            ObjectOutputStream oos = new ObjectOutputStream(new BufferedOutputStream(
-                    new FileOutputStream(cacheFile)));
-            oos.writeObject(result);
-            oos.close();
+        Serializable result = (Serializable) digester.parse(in);
+        if (cache) {
+            _cache.put(new Element(url, result));
         }
         return result;
-    }
-
-    private File getCacheFileForUrl(String url)
-            throws UnsupportedEncodingException {
-
-        if (CACHE_DIRECTORY == null) {
-            return null;
-        }
-        try {
-            MessageDigest cript = MessageDigest.getInstance("SHA-1");
-            cript.reset();
-            cript.update(url.getBytes("utf8"));
-            String name = new String(Hex.encodeHex(cript.digest()));
-            return new File(CACHE_DIRECTORY, name);
-        } catch (NoSuchAlgorithmException ex) {
-            throw new IllegalStateException(ex);
-        }
     }
 }

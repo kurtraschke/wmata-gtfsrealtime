@@ -1,6 +1,5 @@
 /**
- * Copyright (C) 2012 Google, Inc.
- * Copyright (C) 2012 Kurt Raschke
+ * Copyright (C) 2012 Google, Inc. Copyright (C) 2012 Kurt Raschke
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -16,8 +15,6 @@
  */
 package com.kurtraschke.wmatagtfsrealtime;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.transit.realtime.GtfsRealtime.Alert;
 import com.google.transit.realtime.GtfsRealtime.EntitySelector;
@@ -45,28 +42,24 @@ import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
+import net.sf.ehcache.Cache;
+import net.sf.ehcache.CacheManager;
+import net.sf.ehcache.Element;
 import org.onebusaway.transit_data.model.ListBean;
-import org.onebusaway.transit_data.model.RouteBean;
 import org.onebusaway.transit_data.model.trips.TripDetailsBean;
 import org.onebusaway.transit_data.model.trips.TripDetailsInclusionBean;
 import org.onebusaway.transit_data.model.trips.TripDetailsQueryBean;
-import org.onebusway.gtfs_realtime.exporter.GtfsRealtimeExporterModule;
 import org.onebusway.gtfs_realtime.exporter.GtfsRealtimeLibrary;
 import org.onebusway.gtfs_realtime.exporter.GtfsRealtimeMutableProvider;
-import org.onebusway.gtfs_realtime.exporter.GtfsRealtimeProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
 /**
  * This class produces GTFS-realtime trip updates and vehicle positions by
- * periodically polling the custom SEPTA vehicle data API and converting the
+ * periodically polling the custom WMATA vehicle data API and converting the
  * resulting vehicle data into the GTFS-realtime format.
  *
- * Since this class implements {@link GtfsRealtimeProvider}, it will
- * automatically be queried by the {@link GtfsRealtimeExporterModule} to export
- * the GTFS-realtime feeds to file or to host them using a simple web-server, as
- * configured by the client.
  *
  * @author bdferris
  *
@@ -81,9 +74,8 @@ public class GTFSRealtimeProviderImpl {
     private WMATARouteMapperService _routeMapperService;
     private WMATATripMapperService _tripMapperService;
     private TransitDataServiceService _tds;
-    @Inject
-    @Named("WMATA.agencyID")
-    private String AGENCY_ID;
+    private CacheManager _cacheManager;
+    private Cache _lastStopForTripCache;
     /**
      * How often vehicle data will be downloaded, in seconds.
      */
@@ -112,6 +104,16 @@ public class GTFSRealtimeProviderImpl {
     @Inject
     public void setTransitDataServiceService(TransitDataServiceService tds) {
         _tds = tds;
+    }
+
+    @Inject
+    public void setCacheManager(CacheManager cacheManager) {
+        _cacheManager = cacheManager;
+    }
+
+    @Inject
+    public void setLastStopForTripCache(@Named("caches.lastStopForTrip") Cache lastStopForTripCache) {
+        _lastStopForTripCache = lastStopForTripCache;
     }
 
     /**
@@ -144,6 +146,7 @@ public class GTFSRealtimeProviderImpl {
     public void stop() {
         _log.info("stopping GTFS-realtime service");
         _executor.shutdownNow();
+        _cacheManager.shutdown();
     }
 
     /**
@@ -188,7 +191,7 @@ public class GTFSRealtimeProviderImpl {
             String gtfsRouteID;
             String gtfsTripID = null;
 
-            gtfsRouteID = _routeMapperService.getRouteMap().get(route);
+            gtfsRouteID = _routeMapperService.getBusRouteMapping(route);
 
             if (gtfsRouteID != null) {
                 GregorianCalendar serviceDate = new GregorianCalendar();
@@ -200,9 +203,7 @@ public class GTFSRealtimeProviderImpl {
 
                 gtfsTripID = _tripMapperService.getTripMapping(serviceDate.getTime(), trip, route);
 
-                _log.info("Mapped WMATA trip " + trip + " to GTFS trip " + gtfsTripID);
             }
-
             /**
              * We construct a TripDescriptor and VehicleDescriptor, which will
              * be used in both trip updates and vehicle positions to identify
@@ -282,13 +283,17 @@ public class GTFSRealtimeProviderImpl {
 
     /* FIXME: cache this so we don't thrash the TDS too much. */
     private String getLastStopForTrip(String tripID) {
-        TripDetailsQueryBean tdqb = new TripDetailsQueryBean();
-        tdqb.setTripId(tripID);
-        tdqb.setInclusion(new TripDetailsInclusionBean(true, true, false));
-        ListBean<TripDetailsBean> b = _tds.getService().getTripDetails(tdqb);
+        if (!_lastStopForTripCache.isKeyInCache(tripID)) {
 
-        return Iterables.getLast(Iterables.getOnlyElement(b.getList()).getSchedule().getStopTimes()).getStop().getId();
+            TripDetailsQueryBean tdqb = new TripDetailsQueryBean();
+            tdqb.setTripId(tripID);
+            tdqb.setInclusion(new TripDetailsInclusionBean(true, true, false));
+            ListBean<TripDetailsBean> b = _tds.getService().getTripDetails(tdqb);
 
+            _lastStopForTripCache.put(new Element(tripID, Iterables.getLast(Iterables.getOnlyElement(b.getList()).getSchedule().getStopTimes()).getStop().getId()));
+        }
+
+        return (String) _lastStopForTripCache.get(tripID).getObjectValue();
 
     }
 
@@ -313,7 +318,7 @@ public class GTFSRealtimeProviderImpl {
 
             for (String route : routes) {
                 EntitySelector.Builder entity = EntitySelector.newBuilder();
-                String gtfsRoute = _routeMapperService.getFilteredRouteMap().get(route);
+                String gtfsRoute = _routeMapperService.getBusRouteMapping(route);
                 if (gtfsRoute != null) {
                     entity.setRouteId(stripID(gtfsRoute));
                     alert.addInformedEntity(entity);
@@ -328,9 +333,6 @@ public class GTFSRealtimeProviderImpl {
             }
         }
 
-        /* FIXME: cache these mappings to avoid thrashing the TDS. */
-        List<RouteBean> gtfsRoutes = _tds.getService().getRoutesForAgencyId(AGENCY_ID).getList();
-
         for (WMATAAlert railAlert : railAlerts) {
 
             Alert.Builder alert = Alert.newBuilder();
@@ -339,21 +341,13 @@ public class GTFSRealtimeProviderImpl {
 
             String[] routes = railAlert.getTitle().split(", ");
 
-            for (final String route : routes) {
-                EntitySelector.Builder entity = EntitySelector.newBuilder();
+            for (String route : routes) {
 
-                Optional<RouteBean> matchedRoute = Iterables.tryFind(gtfsRoutes, new Predicate<RouteBean>() {
-                    public boolean apply(RouteBean gr) {
-                        if (gr.getShortName() != null) {
-                            return gr.getShortName().equalsIgnoreCase(route);
-                        } else {
-                            return false;
-                        }
-                    }
-                });
+                String mappedRoute = _routeMapperService.getRailRouteMapping(route);
 
-                if (matchedRoute.isPresent()) {
-                    entity.setRouteId(stripID(matchedRoute.get().getId()));
+                if (mappedRoute != null) {
+                    EntitySelector.Builder entity = EntitySelector.newBuilder();
+                    entity.setRouteId(stripID(mappedRoute));
                     alert.addInformedEntity(entity);
                 }
             }
