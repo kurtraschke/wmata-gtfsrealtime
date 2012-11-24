@@ -1,5 +1,6 @@
-/**
- * Copyright (C) 2012 Google, Inc. Copyright (C) 2012 Kurt Raschke
+/*
+ * Copyright (C) 2012 Google, Inc.
+ * Copyright (C) 2012 Kurt Raschke
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -33,7 +34,9 @@ import java.io.IOException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -77,9 +80,12 @@ public class GTFSRealtimeProviderImpl {
     private CacheManager _cacheManager;
     private Cache _lastStopForTripCache;
     /**
-     * How often vehicle data will be downloaded, in seconds.
+     * How often vehicle data will be downloaded, in seconds. FIXME: move this
+     * into the configuration file.
      */
     private int _refreshInterval = 30;
+    /*FIXME: hold this in Ehcache so we don't lose it on shutdown. */
+    private Set<String> allAlerts = new HashSet<String>();
 
     @Inject
     public void setGtfsRealtimeProvider(GtfsRealtimeMutableProvider gtfsRealtimeProvider) {
@@ -179,97 +185,16 @@ public class GTFSRealtimeProviderImpl {
          */
         for (WMATABusPosition bp : busPositions) {
 
-            String route = bp.getRouteID();
-            String vehicle = bp.getVehicleID();
-            String trip = bp.getTripID();
-            Date dateTime = bp.getDateTime();
+            try {
+            ProcessedVehicleResponse pvr = processVehicle(bp);
 
-            float lat = bp.getLat();
-            float lon = bp.getLon();
-            float deviation = bp.getDeviation();
-
-            String gtfsRouteID;
-            String gtfsTripID = null;
-
-            gtfsRouteID = _routeMapperService.getBusRouteMapping(route);
-
-            if (gtfsRouteID != null) {
-                GregorianCalendar serviceDate = new GregorianCalendar();
-                serviceDate.set(Calendar.HOUR_OF_DAY, 0);
-                serviceDate.set(Calendar.MINUTE, 0);
-                serviceDate.set(Calendar.SECOND, 0);
-                serviceDate.set(Calendar.MILLISECOND, 0);
-
-
-                gtfsTripID = _tripMapperService.getTripMapping(serviceDate.getTime(), trip, route);
-
-            }
-            /**
-             * We construct a TripDescriptor and VehicleDescriptor, which will
-             * be used in both trip updates and vehicle positions to identify
-             * the trip and vehicle.
-             */
-            TripDescriptor.Builder tripDescriptor = TripDescriptor.newBuilder();
-            if (gtfsRouteID != null) {
-                //tripDescriptor.setRouteId(stripID(gtfsRouteID));
-            }
-            if (gtfsTripID != null) {
-                tripDescriptor.setTripId(stripID(gtfsTripID));
+            tripUpdates.addEntity(pvr.tripUpdateEntity);
+            vehiclePositions.addEntity(pvr.vehiclePositionEntity);
+            } catch (Exception e) {
+                _log.warn("Error constructing update for vehicle " + bp.getVehicleID(), e);
             }
 
-            VehicleDescriptor.Builder vehicleDescriptor = VehicleDescriptor.newBuilder();
-            vehicleDescriptor.setId(vehicle);
 
-            /**
-             * To construct our TripUpdate, we create a stop-time arrival event
-             * for the last stop for the vehicle, with the specified arrival
-             * delay. We add the stop-time update to a TripUpdate builder, along
-             * with the trip and vehicle descriptors.
-             */
-            StopTimeEvent.Builder arrival = StopTimeEvent.newBuilder();
-            arrival.setDelay(Math.round(deviation * -60));
-
-            StopTimeUpdate.Builder stopTimeUpdate = StopTimeUpdate.newBuilder();
-            stopTimeUpdate.setArrival(arrival);
-            if (gtfsTripID != null) {
-                stopTimeUpdate.setStopId(stripID(getLastStopForTrip(gtfsTripID)));
-            }
-
-            TripUpdate.Builder tripUpdate = TripUpdate.newBuilder();
-            tripUpdate.addStopTimeUpdate(stopTimeUpdate);
-            tripUpdate.setTrip(tripDescriptor);
-            tripUpdate.setVehicle(vehicleDescriptor);
-            /**
-             * Create a new feed entity to wrap the trip update and add it to
-             * the GTFS-realtime trip updates feed.
-             */
-            FeedEntity.Builder tripUpdateEntity = FeedEntity.newBuilder();
-            tripUpdateEntity.setId(vehicle);
-            tripUpdateEntity.setTripUpdate(tripUpdate);
-            tripUpdates.addEntity(tripUpdateEntity);
-            /**
-             * To construct our VehiclePosition, we create a position for the
-             * vehicle. We add the position to a VehiclePosition builder, along
-             * with the trip and vehicle descriptors.
-             */
-            Position.Builder position = Position.newBuilder();
-            position.setLatitude((float) lat);
-            position.setLongitude((float) lon);
-
-            VehiclePosition.Builder vehiclePosition = VehiclePosition.newBuilder();
-            vehiclePosition.setTimestamp(dateTime.getTime() / 1000L);
-            vehiclePosition.setPosition(position);
-            vehiclePosition.setTrip(tripDescriptor);
-            vehiclePosition.setVehicle(vehicleDescriptor);
-
-            /**
-             * Create a new feed entity to wrap the vehicle position and add it
-             * to the GTFS-realtime vehicle positions feed.
-             */
-            FeedEntity.Builder vehiclePositionEntity = FeedEntity.newBuilder();
-            vehiclePositionEntity.setId(vehicle);
-            vehiclePositionEntity.setVehicle(vehiclePosition);
-            vehiclePositions.addEntity(vehiclePositionEntity);
         }
 
         /**
@@ -281,7 +206,115 @@ public class GTFSRealtimeProviderImpl {
         _log.info("vehicles extracted: " + tripUpdates.getEntityCount());
     }
 
-    /* FIXME: cache this so we don't thrash the TDS too much. */
+    private ProcessedVehicleResponse processVehicle(WMATABusPosition bp) throws IOException, SAXException {
+
+        ProcessedVehicleResponse pvr = new ProcessedVehicleResponse();
+
+        String route = bp.getRouteID();
+        String vehicle = bp.getVehicleID();
+        String trip = bp.getTripID();
+        Date dateTime = bp.getDateTime();
+
+        float lat = bp.getLat();
+        float lon = bp.getLon();
+        float deviation = bp.getDeviation();
+
+        String gtfsRouteID;
+        String gtfsTripID = null;
+
+        gtfsRouteID = _routeMapperService.getBusRouteMapping(route);
+
+        if (gtfsRouteID != null) {
+            /*
+             * Assuming that the service date is today's date is naive;
+             * it will fail in both of the following two cases:
+             *  - after midnight, when a trip's service date is the previous
+             *    day
+             *  - before midnight, when a trip is scheduled on the following
+             *    service day (MTA NYCT is known to do this)
+             */
+            GregorianCalendar serviceDate = new GregorianCalendar();
+            serviceDate.set(Calendar.HOUR_OF_DAY, 0);
+            serviceDate.set(Calendar.MINUTE, 0);
+            serviceDate.set(Calendar.SECOND, 0);
+            serviceDate.set(Calendar.MILLISECOND, 0);
+
+            gtfsTripID = _tripMapperService.getTripMapping(serviceDate.getTime(), trip, route);
+        }
+        /**
+         * We construct a TripDescriptor and VehicleDescriptor, which will be
+         * used in both trip updates and vehicle positions to identify the trip
+         * and vehicle.
+         */
+        TripDescriptor.Builder tripDescriptor = TripDescriptor.newBuilder();
+        if (gtfsRouteID != null) {
+            /* FIXME: OBA wrongly rejects TripUpdates which have a route ID set.
+             * Fix OBA then come back here and fix this.
+             */
+            //tripDescriptor.setRouteId(stripID(gtfsRouteID));
+        }
+        if (gtfsTripID != null) {
+            tripDescriptor.setTripId(stripID(gtfsTripID));
+        }
+
+        VehicleDescriptor.Builder vehicleDescriptor = VehicleDescriptor.newBuilder();
+        vehicleDescriptor.setId(vehicle);
+
+        /**
+         * To construct our TripUpdate, we create a stop-time arrival event for
+         * the last stop for the vehicle, with the specified arrival delay. We
+         * add the stop-time update to a TripUpdate builder, along with the trip
+         * and vehicle descriptors.
+         */
+        StopTimeEvent.Builder arrival = StopTimeEvent.newBuilder();
+        arrival.setDelay(Math.round(deviation * -60));
+
+        StopTimeUpdate.Builder stopTimeUpdate = StopTimeUpdate.newBuilder();
+        stopTimeUpdate.setArrival(arrival);
+        if (gtfsTripID != null) {
+            stopTimeUpdate.setStopId(stripID(getLastStopForTrip(gtfsTripID)));
+        }
+
+        TripUpdate.Builder tripUpdate = TripUpdate.newBuilder();
+        tripUpdate.addStopTimeUpdate(stopTimeUpdate);
+        tripUpdate.setTrip(tripDescriptor);
+        tripUpdate.setVehicle(vehicleDescriptor);
+        /**
+         * Create a new feed entity to wrap the trip update and add it to the
+         * GTFS-realtime trip updates feed.
+         */
+        FeedEntity.Builder tripUpdateEntity = FeedEntity.newBuilder();
+        tripUpdateEntity.setId(vehicle);
+        tripUpdateEntity.setTripUpdate(tripUpdate);
+        pvr.tripUpdateEntity = tripUpdateEntity;
+        /**
+         * To construct our VehiclePosition, we create a position for the
+         * vehicle. We add the position to a VehiclePosition builder, along with
+         * the trip and vehicle descriptors.
+         */
+        Position.Builder position = Position.newBuilder();
+        position.setLatitude((float) lat);
+        position.setLongitude((float) lon);
+
+        VehiclePosition.Builder vehiclePosition = VehiclePosition.newBuilder();
+        //FIXME: this should be UTC, not local time.
+        vehiclePosition.setTimestamp(dateTime.getTime() / 1000L);
+        vehiclePosition.setPosition(position);
+        vehiclePosition.setTrip(tripDescriptor);
+        vehiclePosition.setVehicle(vehicleDescriptor);
+
+        /**
+         * Create a new feed entity to wrap the vehicle position and add it to
+         * the GTFS-realtime vehicle positions feed.
+         */
+        FeedEntity.Builder vehiclePositionEntity = FeedEntity.newBuilder();
+        vehiclePositionEntity.setId(vehicle);
+        vehiclePositionEntity.setVehicle(vehiclePosition);
+        pvr.vehiclePositionEntity = vehiclePositionEntity;
+
+        return pvr;
+    }
+
     private String getLastStopForTrip(String tripID) {
         if (!_lastStopForTripCache.isKeyInCache(tripID)) {
 
@@ -305,6 +338,8 @@ public class GTFSRealtimeProviderImpl {
 
         List<WMATAAlert> busAlerts = _api.downloadBusAlerts();
         List<WMATAAlert> railAlerts = _api.downloadRailAlerts();
+
+        Set<String> alertsInUpdate = new HashSet<String>();
 
         FeedMessage.Builder alerts = GtfsRealtimeLibrary.createFeedMessageBuilder();
 
@@ -330,6 +365,7 @@ public class GTFSRealtimeProviderImpl {
                 alertEntity.setId(busAlert.getGuid().toString());
                 alertEntity.setAlert(alert);
                 alerts.addEntity(alertEntity);
+                alertsInUpdate.add(busAlert.getGuid().toString());
             }
         }
 
@@ -357,9 +393,25 @@ public class GTFSRealtimeProviderImpl {
                 alertEntity.setId(railAlert.getGuid().toString());
                 alertEntity.setAlert(alert);
                 alerts.addEntity(alertEntity);
+                alertsInUpdate.add(railAlert.getGuid().toString());
+
             }
 
         }
+
+        allAlerts.addAll(alertsInUpdate);
+
+        Set<String> removedAlerts = new HashSet(allAlerts);
+
+        removedAlerts.removeAll(alertsInUpdate);
+
+        for (String removedAlert : removedAlerts) {
+            FeedEntity.Builder alertEntity = FeedEntity.newBuilder();
+            alertEntity.setId(removedAlert);
+            alertEntity.setIsDeleted(true);
+            alerts.addEntity(alertEntity);
+        }
+
 
         _gtfsRealtimeProvider.setAlerts(alerts.build());
 
@@ -398,5 +450,11 @@ public class GTFSRealtimeProviderImpl {
                 _log.warn("Error in alert refresh task", ex);
             }
         }
+    }
+
+    private class ProcessedVehicleResponse {
+
+        FeedEntity.Builder tripUpdateEntity;
+        FeedEntity.Builder vehiclePositionEntity;
     }
 }

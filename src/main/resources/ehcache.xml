@@ -1,8 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-To change this template, choose Tools | Templates
-and open the template in the editor.
--->
 
 <ehcache
     xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
@@ -10,6 +6,8 @@ and open the template in the editor.
     
     <diskStore path="java.io.tmpdir"/>
     
+    <!-- Eventually some of these will have diskPersistent turned on,
+         so that the state of the mappings is preserved across restarts. -->
     <cache name="wmataapi" overflowToDisk="true" diskPersistent="true" timeToIdleSeconds="86400" maxEntriesLocalHeap="5" />
     
     <cache name="wmatabusroute" overflowToDisk="false" diskPersistent="false" timeToIdleSeconds="3600" maxEntriesLocalHeap="500" />

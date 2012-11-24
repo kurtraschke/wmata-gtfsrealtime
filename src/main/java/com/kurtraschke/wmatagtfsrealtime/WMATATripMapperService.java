@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2012 Kurt Raschke
  *
  *
@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -53,13 +52,14 @@ import org.xml.sax.SAXException;
  */
 public class WMATATripMapperService {
 
-    private static final Logger _log = LoggerFactory.getLogger(GTFSRealtimeProviderImpl.class);
+    private static final Logger _log = LoggerFactory.getLogger(WMATATripMapperService.class);
     private WMATARouteMapperService _routeMapperService;
     private WMATAAPIService _api;
     private TransitDataServiceService _tds;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
     private Cache _tripCache;
     private Cache _stopByIDCache;
+    private final boolean DEBUG_MAPPING = false;
 
     @Inject
     public void setWMATARouteMapperService(WMATARouteMapperService mapperService) {
@@ -114,8 +114,6 @@ public class WMATATripMapperService {
 
             List<TripDetailsBean> candidateTrips = _tds.getService().getTripsForRoute(tfrqb).getList();
 
-            //Collection<TripDetailsBean> candidateTrips = getManyTrips(mappedRouteID, thisTrip);
-
             if (candidateTrips.size() > 0) {
 
                 List<TripScoreKey> scoredTrips = new ArrayList<TripScoreKey>();
@@ -136,49 +134,27 @@ public class WMATATripMapperService {
 
                 TripDetailsBean bestTrip = bestMatch.trip;
 
-                if (bestMatch.score > 0 && bestMatch.score < 100000) {
+                if (bestMatch.score > 0 && bestMatch.score < 25000) {
                     _log.info("Mapped WMATA trip " + tripID + " to GTFS trip " + bestTrip.getTripId());
                     _tripCache.put(new Element(new TripMapKey(serviceDate, tripID), bestTrip.getTripId()));
                 } else {
-                    _log.warn("Could not map WMATA trip " + tripID + " on route " + thisTrip.getRouteID() + " with score " + bestMatch.score);
+                    /*
+                     * In this case, we had one or more candidate trips from the
+                     * TDS to evaluate, but the best of them produced a score that 
+                     * was too high to consider a reliable match.
+                     */
+                    _log.warn("Could not map WMATA trip " + tripID + " on route " + thisTrip.getRouteID() + " with score " + Math.round(bestMatch.score));
                     _tripCache.put(new Element(new TripMapKey(serviceDate, tripID), null));
                 }
             } else {
+                /* 
+                 * This is the case where the TDS simply doesn't return any active
+                 * trips for that route and time.
+                 */
                 _log.warn("Could not map WMATA trip " + tripID);
                 _tripCache.put(new Element(new TripMapKey(serviceDate, tripID), null));
             }
         }
-    }
-
-    private Collection<TripDetailsBean> getManyTrips(String mappedRouteID, WMATATrip thisTrip) {
-
-        Map<String, TripDetailsBean> allTrips = new HashMap<String, TripDetailsBean>();
-
-        long[] times = new long[]{
-            Iterables.getFirst(thisTrip.getStopTimes(), null).getTime().getTime() - (300 * 1000),
-            Iterables.getFirst(thisTrip.getStopTimes(), null).getTime().getTime(),
-            Iterables.getLast(thisTrip.getStopTimes()).getTime().getTime(),
-            Iterables.getLast(thisTrip.getStopTimes()).getTime().getTime() + (300 * 1000)
-        };
-
-        for (long time : times) {
-
-            TripsForRouteQueryBean tfrqb = new TripsForRouteQueryBean();
-
-            tfrqb.setRouteId(mappedRouteID);
-            tfrqb.setTime(time);
-            tfrqb.setInclusion(new TripDetailsInclusionBean(true, true, false));
-
-            List<TripDetailsBean> candidateTrips = _tds.getService().getTripsForRoute(tfrqb).getList();
-
-            for (TripDetailsBean trip : candidateTrips) {
-                allTrips.put(trip.getTripId(), trip);
-            }
-
-        }
-
-        return allTrips.values();
-
     }
 
     private double scoreTripMatch(Date serviceDate, WMATATrip wmataTrip, TripDetailsBean gtfsTrip) throws IOException, SAXException {
@@ -188,18 +164,21 @@ public class WMATATripMapperService {
 
         for (WMATAStopTime st : wmataTrip.getStopTimes()) {
 
-            if (st.getStopID().length() == 7) { //don't bother trying to map fake stoptimes
+            WMATAStop thisStop = getWMATAStopByID(st.getStopID());
 
+            if (st.getStopID().length() == 7 && thisStop != null) {
+                /*
+                 * Don't bother trying to map stoptimes at fake stops
+                 * or stops that don't exist.
+                 */
                 List<StopTimeScoreKey> options = new ArrayList<StopTimeScoreKey>();
                 for (TripStopTimeBean gst : gtfsTrip.getSchedule().getStopTimes()) {
 
                     double score = stopDistanceMetric(gst.getStop(),
                             (baseTime + gst.getArrivalTime()) * 1000L,
-                            getWMATAStopByID(st.getStopID()),
+                            thisStop,
                             st.getTime().getTime());
-                    //if (score < 50) {
                     options.add(new StopTimeScoreKey(score, gst));
-                    //}
 
                 }
 
@@ -217,7 +196,7 @@ public class WMATATripMapperService {
 
         }
 
-        if (false) {
+        if (DEBUG_MAPPING) {
             System.out.println("Mapping for WMATA trip " + wmataTrip.getTripID() + " to GTFS trip " + gtfsTrip.getTripId());
             for (Map.Entry<WMATAStopTime, StopTimeScoreKey> e : stopTimeMap.entrySet()) {
                 WMATAStopTime w = e.getKey();
@@ -228,19 +207,14 @@ public class WMATATripMapperService {
             }
         }
 
-        //if (stopTimeMap.size() > ((double) wmataTrip.getStopTimes().size()) * 0.75) {
         double score = 0;
         for (StopTimeScoreKey v : stopTimeMap.values()) {
             score += v.score;
         }
-        if (false) {
+        if (DEBUG_MAPPING) {
             System.out.println("Total score is " + score);
         }
         return score;
-
-        //} else {
-        //    return Double.MAX_VALUE;
-        //}
 
     }
 
@@ -294,7 +268,12 @@ public class WMATATripMapperService {
             _stopByIDCache.put(new Element(stopID, thisStop));
         }
 
-        return (WMATAStop) _stopByIDCache.get(stopID).getObjectValue();
+        try {
+            return (WMATAStop) _stopByIDCache.get(stopID).getObjectValue();
+        } catch (NullPointerException e) {
+            return null;
+        }
+
     }
 
     private static class TripMapKey implements Serializable {

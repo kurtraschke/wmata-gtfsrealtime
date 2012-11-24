@@ -212,7 +212,7 @@ public class WMATAAPIService {
 
     @SuppressWarnings("unchecked")
     public WMATARouteScheduleInfo downloadRouteScheduleInfo(String routeID, String date) throws IOException, SAXException {
-        String url = "http://api.wmata.com/Bus.svc/RouteSchedule?includeVariations=true&date=" + date + "&routeId=" + URLEncoder.encode(routeID, "utf-8") + "&api_key=" + API_KEY;
+        String url = "http://api.wmata.com/Bus.svc/RouteSchedule?includeVariations=false&date=" + date + "&routeId=" + URLEncoder.encode(routeID, "utf-8") + "&api_key=" + API_KEY;
         return (WMATARouteScheduleInfo) digestUrl(url, true, _routeScheduleDigester);
     }
 

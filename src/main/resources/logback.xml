@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Cut down on some of the log spew from included components. -->
+
+    <logger name="net.sf.ehcache" level="WARN" />
+    <logger name="org.mortbay.log" level="WARN" />
+    <logger name="com.caucho.hessian.io.SerializerFactory" level="ERROR" />
+
+     <root level="ALL">
+        <appender class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            </encoder>
+        </appender>
+    </root>
+    
+</configuration>

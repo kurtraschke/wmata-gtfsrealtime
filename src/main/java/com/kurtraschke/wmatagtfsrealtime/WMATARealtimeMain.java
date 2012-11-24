@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2012 Google, Inc.
  * Copyright (C) 2012 Kurt Raschke
  *
@@ -38,6 +38,7 @@ import org.onebusway.gtfs_realtime.exporter.TripUpdatesFileWriter;
 import org.onebusway.gtfs_realtime.exporter.TripUpdatesServlet;
 import org.onebusway.gtfs_realtime.exporter.VehiclePositionsFileWriter;
 import org.onebusway.gtfs_realtime.exporter.VehiclePositionsServlet;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 
 public class WMATARealtimeMain {
 
@@ -53,7 +54,6 @@ public class WMATARealtimeMain {
         WMATARealtimeMain m = new WMATARealtimeMain();
         m.run(args);
     }
-    
     private GTFSRealtimeProviderImpl _provider;
     private LifecycleService _lifecycleService;
 
@@ -68,6 +68,11 @@ public class WMATARealtimeMain {
     }
 
     public void run(String[] args) throws Exception {
+        //The Hessian client uses java.util.logging, so we bridge it to
+        //slf4j, so all logging is funneled into logback.
+        SLF4JBridgeHandler.removeHandlersForRootLogger();
+        SLF4JBridgeHandler.install();
+
 
         if (args.length == 0 || CommandLineInterfaceLibrary.wantsHelp(args)) {
             printUsage();
