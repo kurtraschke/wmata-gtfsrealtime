@@ -59,8 +59,9 @@ public class WMATATripMapperService {
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
     private Cache _tripCache;
     private Cache _stopByIDCache;
-    
-    private static int NOT_MAPPED = -1;
+    private final int NOT_MAPPED = -1;
+    private final int TIME_OFFSET_MIN = 10;
+    private final int SCORE_LIMIT = 10000;
 
     @Inject
     public void setWMATARouteMapperService(WMATARouteMapperService mapperService) {
@@ -111,7 +112,7 @@ public class WMATATripMapperService {
 
             long tripTime = thisTrip.getStopTimes().get(0).getTime().getTime();
 
-            tripTime += (10 * 60 * 1000);
+            tripTime += (TIME_OFFSET_MIN * 60 * 1000);
 
             tfrqb.setRouteId(mappedRouteID);
             tfrqb.setTime(tripTime);
@@ -135,32 +136,44 @@ public class WMATATripMapperService {
 
                 }
 
-                TripScoreKey bestMatch = Collections.min(scoredTrips, new Comparator<TripScoreKey>() {
-                    public int compare(TripScoreKey t, TripScoreKey t1) {
-                        return Doubles.compare(t.score, t1.score);
+                if (scoredTrips.size() > 0) {
+                    TripScoreKey bestMatch = Collections.min(scoredTrips, new Comparator<TripScoreKey>() {
+                        public int compare(TripScoreKey t, TripScoreKey t1) {
+                            return Doubles.compare(t.score, t1.score);
+                        }
+                    });
+
+                    TripDetailsBean bestTrip = bestMatch.trip;
+
+                    if (bestMatch.score < SCORE_LIMIT) {
+                        _log.info("Mapped WMATA trip " + tripID + " to GTFS trip " + bestTrip.getTripId());
+                        _tripCache.put(new Element(new TripMapKey(serviceDate, tripID), bestTrip.getTripId()));
+                    } else {
+                        /*
+                         * In this case, we had one or more candidate trips from the
+                         * TDS to evaluate, but the best of them produced a score that 
+                         * was too high to consider a reliable match.
+                         */
+                        _log.warn("Could not map WMATA trip " + tripID + " on route " + thisTrip.getRouteID() + " with score " + Math.round(bestMatch.score));
+                        _tripCache.put(new Element(new TripMapKey(serviceDate, tripID), null));
                     }
-                });
 
-                TripDetailsBean bestTrip = bestMatch.trip;
-
-                if (bestMatch.score < 10000) {
-                    _log.info("Mapped WMATA trip " + tripID + " to GTFS trip " + bestTrip.getTripId());
-                    _tripCache.put(new Element(new TripMapKey(serviceDate, tripID), bestTrip.getTripId()));
                 } else {
-                    /*
-                     * In this case, we had one or more candidate trips from the
-                     * TDS to evaluate, but the best of them produced a score that 
-                     * was too high to consider a reliable match.
+                    /* 
+                     * This is the case where all of the candidate trips failed
+                     * to map any stoptimes.
                      */
-                    _log.warn("Could not map WMATA trip " + tripID + " on route " + thisTrip.getRouteID() + " with score " + Math.round(bestMatch.score));
+                    _log.warn("Could not map WMATA trip " + tripID + " (all trips matched no stoptimes)");
                     _tripCache.put(new Element(new TripMapKey(serviceDate, tripID), null));
+
                 }
+
             } else {
                 /* 
                  * This is the case where the TDS simply doesn't return any active
                  * trips for that route and time.
                  */
-                _log.warn("Could not map WMATA trip " + tripID);
+                _log.warn("Could not map WMATA trip " + tripID + " (no candidates from TDS)");
                 _tripCache.put(new Element(new TripMapKey(serviceDate, tripID), null));
             }
         }
