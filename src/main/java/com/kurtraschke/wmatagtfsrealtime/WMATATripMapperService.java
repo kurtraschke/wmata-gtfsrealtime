@@ -90,7 +90,7 @@ public class WMATATripMapperService {
 
     }
 
-    private void mapTrip(Date serviceDate, final String tripID, String routeID) throws IOException, SAXException {
+    private String mapTrip(Date serviceDate, final String tripID, String routeID) throws IOException, SAXException {
         String mappedRouteID = _routeMapperService.getBusRouteMapping(routeID);
 
 
@@ -134,8 +134,9 @@ public class WMATATripMapperService {
                     TripDetailsBean bestTrip = bestMatch.trip;
 
                     if (bestMatch.score < SCORE_LIMIT) {
-                        _log.info("Mapped WMATA trip " + tripID + " to GTFS trip " + bestTrip.getTripId());
-                        _tripCache.put(new Element(new TripMapKey(serviceDate, tripID), bestTrip.getTripId()));
+                        String mappedTripID = bestTrip.getTripId();
+                        _log.info("Mapped WMATA trip " + tripID + " to GTFS trip " + mappedTripID);
+                        return mappedTripID;
                     } else {
                         /*
                          * In this case, we had one or more candidate trips from the
@@ -143,7 +144,7 @@ public class WMATATripMapperService {
                          * was too high to consider a reliable match.
                          */
                         _log.warn("Could not map WMATA trip " + tripID + " on route " + thisTrip.getRouteID() + " with score " + Math.round(bestMatch.score));
-                        _tripCache.put(new Element(new TripMapKey(serviceDate, tripID), null));
+                        return null;
                     }
 
                 } else {
@@ -151,9 +152,8 @@ public class WMATATripMapperService {
                      * This is the case where all of the candidate trips failed
                      * to map any stoptimes.
                      */
-                    _log.warn("Could not map WMATA trip " + tripID + " (all trips matched no stoptimes)");
-                    _tripCache.put(new Element(new TripMapKey(serviceDate, tripID), null));
-
+                    _log.warn("Could not map WMATA trip " + tripID + " on route " + thisTrip.getRouteID() + " (all trips matched no stoptimes)");
+                    return null;
                 }
 
             } else {
@@ -161,9 +161,16 @@ public class WMATATripMapperService {
                  * This is the case where the TDS simply doesn't return any active
                  * trips for that route and time.
                  */
-                _log.warn("Could not map WMATA trip " + tripID + " (no candidates from TDS)");
-                _tripCache.put(new Element(new TripMapKey(serviceDate, tripID), null));
+                _log.warn("Could not map WMATA trip " + tripID + " on route " + thisTrip.getRouteID() + " (no candidates from TDS)");
+                return null;
             }
+        } else {
+            /* 
+             * This is the case where we could not map the route;
+             * no sense trying to map the trip when we don't know the route.
+             */
+            _log.warn("Could not map WMATA trip " + tripID + " (could not map route)");
+            return null;
         }
     }
 
@@ -287,18 +294,25 @@ public class WMATATripMapperService {
     public String getTripMapping(Date serviceDate, String tripID, String routeID) throws IOException, SAXException {
         TripMapKey k = new TripMapKey(serviceDate, tripID);
 
-        if (!_tripCache.isKeyInCache(k)) {
-            mapTrip(serviceDate, tripID, routeID);
+        Element e = _tripCache.get(k);
+
+        if (e == null) {
+
+            String mappedTripID = mapTrip(serviceDate, tripID, routeID);
+            _tripCache.put(new Element(k, mappedTripID));
+            return mappedTripID;
+        } else {
+
+            return (String) e.getObjectValue();
         }
-
-        return (String) _tripCache.get(k).getObjectValue();
-
 
     }
 
     private WMATAStop getWMATAStopByID(final String stopID) throws IOException, SAXException {
 
-        if (!_stopByIDCache.isKeyInCache(stopID)) {
+        Element e = _stopByIDCache.get(stopID);
+
+        if (e == null) {
             List<WMATAStop> stops = _api.downloadStopList();
 
             WMATAStop thisStop = Iterables.find(stops, new Predicate<WMATAStop>() {
@@ -308,14 +322,10 @@ public class WMATATripMapperService {
             });
 
             _stopByIDCache.put(new Element(stopID, thisStop));
+            return thisStop;
+        } else {
+            return (WMATAStop) e.getObjectValue();
         }
-
-        try {
-            return (WMATAStop) _stopByIDCache.get(stopID).getObjectValue();
-        } catch (NullPointerException e) {
-            return null;
-        }
-
     }
 
     private static class TripMapKey implements Serializable {

@@ -237,10 +237,10 @@ public class WMATAAPIService {
     private Object digestUrl(String url, boolean cache, Digester digester) throws IOException,
             SAXException {
 
-        if (cache && _cache.isKeyInCache(url)) {
-            Element e = _cache.get(url);
+        Element e = _cache.get(url);
+        
+        if (cache && e != null) {
             return e.getObjectValue();
-
         }
         InputStream in = _downloader.openUrl(url);
         Serializable result = (Serializable) digester.parse(in);

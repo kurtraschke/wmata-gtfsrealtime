@@ -321,17 +321,23 @@ public class GTFSRealtimeProviderImpl {
     }
 
     private String getLastStopForTrip(String tripID) {
-        if (!_lastStopForTripCache.isKeyInCache(tripID)) {
+        Element e = _lastStopForTripCache.get(tripID);
+
+        if (e == null) {
 
             TripDetailsQueryBean tdqb = new TripDetailsQueryBean();
             tdqb.setTripId(tripID);
             tdqb.setInclusion(new TripDetailsInclusionBean(true, true, false));
             ListBean<TripDetailsBean> b = _tds.getService().getTripDetails(tdqb);
 
-            _lastStopForTripCache.put(new Element(tripID, Iterables.getLast(Iterables.getOnlyElement(b.getList()).getSchedule().getStopTimes()).getStop().getId()));
-        }
+            String lastStopID = Iterables.getLast(Iterables.getOnlyElement(b.getList()).getSchedule().getStopTimes()).getStop().getId();
 
-        return (String) _lastStopForTripCache.get(tripID).getObjectValue();
+            _lastStopForTripCache.put(new Element(tripID, lastStopID));
+
+            return lastStopID;
+        } else {
+            return (String) e.getObjectValue();
+        }
 
     }
 

@@ -79,13 +79,12 @@ public class WMATARouteMapperService {
 
     }
 
-    private void mapBusRoute(String routeID) {
+    private String mapBusRoute(String routeID) {
 
         if (overrideMappings.containsKey(routeID)) {
             String mappedRouteID = overrideMappings.get(routeID);
             _log.info("Mapped WMATA route " + routeID + " to GTFS route " + mappedRouteID + " (using override)");
-            _busRouteCache.put(new Element(routeID, mappedRouteID));
-            return;
+            return mappedRouteID;
         }
 
         Matcher m = routeExtract.matcher(routeID);
@@ -107,25 +106,24 @@ public class WMATARouteMapperService {
                 });
 
                 if (matchedRoute.isPresent()) {
-                    _log.info("Mapped WMATA route " + routeID + " to GTFS route " + matchedRoute.get().getId());
-                    _busRouteCache.put(new Element(routeID, matchedRoute.get().getId()));
-
+                    String mappedRouteID = matchedRoute.get().getId();
+                    _log.info("Mapped WMATA route " + routeID + " to GTFS route " + mappedRouteID);
+                    return mappedRouteID;
                 } else {
                     _log.warn("Could not map WMATA route: " + routeID);
-                    _busRouteCache.put(new Element(routeID, null));
-
+                    return null;
                 }
             } else {
                 _log.warn("Not mapping blacklisted WMATA route: " + routeID);
-                _busRouteCache.put(new Element(routeID, null));
+                return null;
             }
         } else {
             _log.warn("Not mapping malformed WMATA route: " + routeID);
-            _busRouteCache.put(new Element(routeID, null));
+            return null;
         }
     }
 
-    private void mapRailRoute(final String routeName) {
+    private String mapRailRoute(final String routeName) {
         List<RouteBean> gtfsRoutes = _tds.getService().getRoutesForAgencyId(AGENCY_ID).getList();
 
 
@@ -140,30 +138,39 @@ public class WMATARouteMapperService {
         });
 
         if (matchedRoute.isPresent()) {
-            _log.info("Mapped WMATA route " + routeName + " to GTFS route " + matchedRoute.get().getId());
-            _railRouteCache.put(new Element(routeName, matchedRoute.get().getId()));
+            String mappedRouteID = matchedRoute.get().getId();
+            _log.info("Mapped WMATA route " + routeName + " to GTFS route " + mappedRouteID);
+            return mappedRouteID;
         } else {
             _log.warn("Could not map WMATA route: " + routeName);
-            _railRouteCache.put(new Element(routeName, null));
+            return null;
         }
 
     }
 
     public String getBusRouteMapping(String routeID) {
-        if (!_busRouteCache.isKeyInCache(routeID)) {
-            mapBusRoute(routeID);
-        }
+        Element e = _busRouteCache.get(routeID);
 
-        return (String) _busRouteCache.get(routeID).getObjectValue();
+        if (e == null) {
+            String mappedRouteID = mapBusRoute(routeID);
+            _busRouteCache.put(new Element(routeID, mappedRouteID));
+            return mappedRouteID;
+        } else {
+            return (String) e.getObjectValue();
+        }
 
     }
 
     public String getRailRouteMapping(String routeID) {
-        if (!_railRouteCache.isKeyInCache(routeID)) {
-            mapRailRoute(routeID);
-        }
+        Element e = _railRouteCache.get(routeID);
 
-        return (String) _railRouteCache.get(routeID).getObjectValue();
+        if (e == null) {
+            String mappedRouteID = mapRailRoute(routeID);
+            _railRouteCache.put(new Element(routeID, mappedRouteID));
+            return mappedRouteID;
+        } else {
+            return (String) e.getObjectValue();
+        }
 
     }
 }
