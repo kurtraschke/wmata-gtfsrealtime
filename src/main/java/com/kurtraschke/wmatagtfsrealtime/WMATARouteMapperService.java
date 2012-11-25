@@ -21,7 +21,9 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
@@ -50,8 +52,15 @@ public class WMATARouteMapperService {
         "L99", "P99", "PATBL", "PATFM", "PATLA", "PATMG", "PATNO",
         "PATRO", "PATSH", "PATSO", "PATWN", "PATWO", "SH99", "W99",
         "W99v1"};
+    private final static Map<String, String> overrideMappings = new HashMap<String, String>();
     private final Pattern routeExtract = Pattern.compile("^([A-Z0-9]+)(c?v?S?[0-9]?).*$");
     private final Predicate<String> matchBadRoutes = Predicates.in(Arrays.asList(BAD_ROUTES));
+
+    static {
+        overrideMappings.put("R99", "3030-2_259");
+        overrideMappings.put("R99v1", "3030-2_259");
+        overrideMappings.put("REX", "3030-2_259");
+    }
 
     @Inject
     public void setTransitDataServiceService(TransitDataServiceService tds) {
@@ -71,6 +80,14 @@ public class WMATARouteMapperService {
     }
 
     private void mapBusRoute(String routeID) {
+
+        if (overrideMappings.containsKey(routeID)) {
+            String mappedRouteID = overrideMappings.get(routeID);
+            _log.info("Mapped WMATA route " + routeID + " to GTFS route " + mappedRouteID + " (using override)");
+            _busRouteCache.put(new Element(routeID, mappedRouteID));
+            return;
+        }
+
         Matcher m = routeExtract.matcher(routeID);
 
         if (m.matches()) {
@@ -137,7 +154,7 @@ public class WMATARouteMapperService {
             mapBusRoute(routeID);
         }
 
-        return (String) _busRouteCache.get(routeID).getObjectValue();    
+        return (String) _busRouteCache.get(routeID).getObjectValue();
 
     }
 
