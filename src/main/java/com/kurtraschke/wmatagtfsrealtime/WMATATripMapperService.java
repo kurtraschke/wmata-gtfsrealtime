@@ -60,7 +60,7 @@ public class WMATATripMapperService {
     private Cache _tripCache;
     private Cache _stopByIDCache;
     private final int NOT_MAPPED = -1;
-    private final int TIME_OFFSET_MIN = 10;
+    private final int TIME_OFFSET_MIN = 5;
     private final int SCORE_LIMIT = 10000;
 
     @Inject
@@ -107,20 +107,8 @@ public class WMATATripMapperService {
                 }
             });
 
-
-            TripsForRouteQueryBean tfrqb = new TripsForRouteQueryBean();
-
-            long tripTime = thisTrip.getStopTimes().get(0).getTime().getTime();
-
-            tripTime += (TIME_OFFSET_MIN * 60 * 1000);
-
-            tfrqb.setRouteId(mappedRouteID);
-            tfrqb.setTime(tripTime);
-            tfrqb.setInclusion(new TripDetailsInclusionBean(true, true, false));
-
-            _log.debug("Querying for trips on route " + mappedRouteID + " at time " + tripTime);
-
-            List<TripDetailsBean> candidateTrips = _tds.getService().getTripsForRoute(tfrqb).getList();
+            List<TripDetailsBean> candidateTrips = getTripsForTime(mappedRouteID,
+                    thisTrip.getStopTimes().get(0).getTime().getTime());
 
             if (candidateTrips.size() > 0) {
 
@@ -177,6 +165,35 @@ public class WMATATripMapperService {
                 _tripCache.put(new Element(new TripMapKey(serviceDate, tripID), null));
             }
         }
+    }
+
+    private List<TripDetailsBean> getTripsForTime(String routeID, long tripTime) {
+        List<TripDetailsBean> candidateTrips;
+        Map<String, TripDetailsBean> allCandidateTrips = new HashMap<String, TripDetailsBean>();
+        TripsForRouteQueryBean tfrqb = new TripsForRouteQueryBean();
+
+        tfrqb.setRouteId(routeID);
+        tfrqb.setTime(tripTime - (TIME_OFFSET_MIN * 60 * 1000));
+        tfrqb.setInclusion(new TripDetailsInclusionBean(true, true, false));
+
+        _log.debug("Querying for trips on route " + routeID + " at time " + tripTime);
+
+        candidateTrips = _tds.getService().getTripsForRoute(tfrqb).getList();
+
+        for (TripDetailsBean t : candidateTrips) {
+            allCandidateTrips.put(t.getTripId(), t);
+        }
+
+        tfrqb.setTime(tripTime + (TIME_OFFSET_MIN * 60 * 1000));
+
+
+        candidateTrips = _tds.getService().getTripsForRoute(tfrqb).getList();
+
+        for (TripDetailsBean t : candidateTrips) {
+            allCandidateTrips.put(t.getTripId(), t);
+        }
+
+        return new ArrayList<TripDetailsBean>(allCandidateTrips.values());
     }
 
     private double scoreTripMatch(Date serviceDate, WMATATrip wmataTrip, TripDetailsBean gtfsTrip) throws IOException, SAXException {
