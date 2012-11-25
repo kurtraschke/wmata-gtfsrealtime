@@ -227,6 +227,14 @@ public class WMATATripMapperService {
 
                     if (score < 500) {
                         options.add(new StopTimeScoreKey(score, gst));
+                    } else if ((Math.abs(((baseTime + gst.getArrivalTime()) * 1000L) - st.getTime().getTime()) < (2 * 60 * 1000)) && (score < 1000)) {
+                        /* If the times are within two minutes but the
+                         * time-distance score is still large
+                         * (in this case meaning a significant distance),
+                         * we still add the stop. This accomodates some severe 
+                         * geocoding irregularities which have been observed.
+                         */
+                        options.add(new StopTimeScoreKey(score, gst));
                     }
 
                 }
@@ -256,7 +264,13 @@ public class WMATATripMapperService {
             _log.debug(Double.toString(score));
         }
 
-        if (stopTimeMap.size() > wmataTrip.getStopTimes().size()/2) {
+        /* Require that at least 40% of a trip's stoptimes be mapped
+         * in order to return a result.
+         * This keeps us from selecting a trip with just a few stoptimes mapped
+         * (with very low scores) when the remainder are way off.
+         */
+        
+        if (stopTimeMap.size() > wmataTrip.getStopTimes().size() / 2.5) {
             double score = 0;
 
             for (StopTimeScoreKey v : stopTimeMap.values()) {
@@ -286,6 +300,13 @@ public class WMATATripMapperService {
 
     private static double stopDistanceMetric(StopBean gtfsStop, long gtfsStopTime, WMATAStop wmataStop, long wmataStopTime) {
         double d = distance(gtfsStop.getLat(), gtfsStop.getLon(), wmataStop.getLat(), wmataStop.getLon());
+
+        /*
+         * Halving the distance reduces its weight in the metric by half,
+         * thus putting more emphasis on matching times than matching locations.
+         */
+        
+        d /= 2.0;
 
         return Math.sqrt((4 * Math.pow(d, 2)) + Math.pow(((gtfsStopTime / 1000) - (wmataStopTime / 1000)), 2));
 
