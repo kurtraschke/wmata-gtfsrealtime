@@ -20,4 +20,7 @@
     <cache name="wmatastopbyid" overflowToDisk="false" diskPersistent="false" timeToIdleSeconds="3600" maxEntriesLocalHeap="5000" />    
     <cache name="wmatalaststopfortrip" overflowToDisk="false" diskPersistent="false" timeToIdleSeconds="3600" maxEntriesLocalHeap="1000" />
     
+    <!-- Cache IDs of alerts so we can mark them as deleted once removed. -->
+    <cache name="wmataalertid" overflowToDisk="false" diskPersistent="true" timeToLiveSeconds="172800" maxEntriesLocalHeap="500" />
+    
 </ehcache>

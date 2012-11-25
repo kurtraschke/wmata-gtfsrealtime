@@ -16,7 +16,9 @@
  */
 package com.kurtraschke.wmatagtfsrealtime;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.google.transit.realtime.GtfsRealtime.Alert;
 import com.google.transit.realtime.GtfsRealtime.EntitySelector;
 import com.google.transit.realtime.GtfsRealtime.FeedEntity;
@@ -79,13 +81,12 @@ public class GTFSRealtimeProviderImpl {
     private TransitDataServiceService _tds;
     private CacheManager _cacheManager;
     private Cache _lastStopForTripCache;
+    private Cache _alertIDCache;
     /**
      * How often vehicle data will be downloaded, in seconds. FIXME: move this
      * into the configuration file.
      */
     private int _refreshInterval = 30;
-    /*FIXME: hold this in Ehcache so we don't lose it on shutdown. */
-    private Set<String> allAlerts = new HashSet<String>();
 
     @Inject
     public void setGtfsRealtimeProvider(GtfsRealtimeMutableProvider gtfsRealtimeProvider) {
@@ -120,6 +121,11 @@ public class GTFSRealtimeProviderImpl {
     @Inject
     public void setLastStopForTripCache(@Named("caches.lastStopForTrip") Cache lastStopForTripCache) {
         _lastStopForTripCache = lastStopForTripCache;
+    }
+
+    @Inject
+    public void setAlertIDCache(@Named("caches.alertID") Cache alertIDCache) {
+        _alertIDCache = alertIDCache;
     }
 
     /**
@@ -364,7 +370,7 @@ public class GTFSRealtimeProviderImpl {
                 alertEntity.setId(busAlert.getGuid().toString());
                 alertEntity.setAlert(alert);
                 alerts.addEntity(alertEntity);
-                alertsInUpdate.add(busAlert.getGuid().toString());
+                _alertIDCache.put(new Element(busAlert.getGuid().toString(), null));
             }
         }
 
@@ -392,25 +398,29 @@ public class GTFSRealtimeProviderImpl {
                 alertEntity.setId(railAlert.getGuid().toString());
                 alertEntity.setAlert(alert);
                 alerts.addEntity(alertEntity);
-                alertsInUpdate.add(railAlert.getGuid().toString());
-
+                _alertIDCache.put(new Element(railAlert.getGuid().toString(), null));
             }
 
         }
 
-        allAlerts.addAll(alertsInUpdate);
+        Set<String> currentAlertIDs = new HashSet<String>();
+        for (FeedEntity e : alerts.getEntityList()) {
+            currentAlertIDs.add(e.getId());
+        }
 
-        Set<String> removedAlerts = new HashSet(allAlerts);
+        ImmutableSet<String> allAlertIDs = ImmutableSet.copyOf(_alertIDCache.getKeysWithExpiryCheck());
 
-        removedAlerts.removeAll(alertsInUpdate);
-
-        for (String removedAlert : removedAlerts) {
+        /*
+         * If an alert was in the feed previously, and is not now,
+         * then add it back to the feed with the isDeleted flag set, so
+         * clients will remove it from their UI.
+         */
+        for (String removedAlert : Sets.difference(allAlertIDs, currentAlertIDs)) {
             FeedEntity.Builder alertEntity = FeedEntity.newBuilder();
             alertEntity.setId(removedAlert);
             alertEntity.setIsDeleted(true);
             alerts.addEntity(alertEntity);
         }
-
 
         _gtfsRealtimeProvider.setAlerts(alerts.build());
 
