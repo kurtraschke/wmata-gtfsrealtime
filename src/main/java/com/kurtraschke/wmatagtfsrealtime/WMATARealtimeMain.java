@@ -87,19 +87,20 @@ public class WMATARealtimeMain {
         Set<Module> modules = new HashSet<Module>();
         WMATARealtimeModule.addModuleAndDependencies(modules);
 
+        Injector injector = Guice.createInjector(
+                new ConfigurationModule() {
+                    @Override
+                    protected void bindConfigurations() {
+                        bindEnvironmentVariables();
+                        bindSystemProperties();
 
-        Injector injector = Guice.createInjector(new ConfigurationModule() {
-            @Override
-            protected void bindConfigurations() {
-                bindEnvironmentVariables();
-                bindSystemProperties();
-
-                if (cli.hasOption(ARG_CONFIG_FILE)) {
-                    bindProperties(new File(cli.getOptionValue(ARG_CONFIG_FILE)));
-                }
-            }
-        },
+                        if (cli.hasOption(ARG_CONFIG_FILE)) {
+                            bindProperties(new File(cli.getOptionValue(ARG_CONFIG_FILE)));
+                        }
+                    }
+                },
                 Rocoto.expandVariables(modules));
+
         injector.injectMembers(this);
 
         if (cli.hasOption(ARG_TRIP_UPDATES_URL)) {
@@ -107,6 +108,7 @@ public class WMATARealtimeMain {
             TripUpdatesServlet servlet = injector.getInstance(TripUpdatesServlet.class);
             servlet.setUrl(url);
         }
+
         if (cli.hasOption(ARG_TRIP_UPDATES_PATH)) {
             File path = new File(cli.getOptionValue(ARG_TRIP_UPDATES_PATH));
             TripUpdatesFileWriter writer = injector.getInstance(TripUpdatesFileWriter.class);
@@ -118,6 +120,7 @@ public class WMATARealtimeMain {
             VehiclePositionsServlet servlet = injector.getInstance(VehiclePositionsServlet.class);
             servlet.setUrl(url);
         }
+
         if (cli.hasOption(ARG_VEHICLE_POSITIONS_PATH)) {
             File path = new File(cli.getOptionValue(ARG_VEHICLE_POSITIONS_PATH));
             VehiclePositionsFileWriter writer = injector.getInstance(VehiclePositionsFileWriter.class);
@@ -129,6 +132,7 @@ public class WMATARealtimeMain {
             AlertsServlet servlet = injector.getInstance(AlertsServlet.class);
             servlet.setUrl(url);
         }
+
         if (cli.hasOption(ARG_ALERTS_PATH)) {
             File path = new File(cli.getOptionValue(ARG_ALERTS_PATH));
             AlertsFileWriter writer = injector.getInstance(AlertsFileWriter.class);
