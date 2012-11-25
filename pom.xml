@@ -40,8 +40,10 @@
             <groupId>org.onebusaway</groupId>
             <artifactId>onebusaway-guice-jsr250</artifactId>
             <version>1.0.2</version>
+            <!-- We want to use a newer version of slf4j than 
+            what this dependency pulls in. -->
             <exclusions>
-                <exclusion>  <!-- declare the exclusion here -->
+                <exclusion>
                     <groupId>org.slf4j</groupId>
                     <artifactId>slf4j-api</artifactId>
                 </exclusion>
@@ -112,14 +114,19 @@
             <type>pom</type>
         </dependency>
     </dependencies>
-
-    
-    
     
     <build>
         <plugins>
             <plugin>
-                
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.0</version>
+                <configuration>
+                    <compilerArgument>-Xlint:all</compilerArgument>
+                </configuration>
+            </plugin>
+
+            <plugin>            
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>2.4</version>
@@ -133,15 +140,11 @@
                     <resources>
                         <resource>
                             <directory>src/main/resources</directory>
-                            <includes>
-                                <include>**/ehcache.xml</include>
-                            </includes>
                         </resource>
                     </resources>
                 </configuration>
-        
-        
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -153,15 +156,15 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <!--<minimizeJar>true</minimizeJar>-->
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>com.kurtraschke.wmatagtfsrealtime.WMATARealtimeMain</mainClass>
+                                </transformer>
+                            </transformers>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
-    
     </build>
-    
-    
-    
 </project>
