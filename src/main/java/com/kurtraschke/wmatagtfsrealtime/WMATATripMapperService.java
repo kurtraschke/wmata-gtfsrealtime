@@ -249,7 +249,7 @@ public class WMATATripMapperService {
             _log.debug(Double.toString(score));
         }
 
-        if (stopTimeMap.size() > 0) {
+        if (stopTimeMap.size() > wmataTrip.getStopTimes().size()/2) {
             double score = 0;
 
             for (StopTimeScoreKey v : stopTimeMap.values()) {
