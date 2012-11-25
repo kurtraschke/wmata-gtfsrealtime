@@ -297,7 +297,6 @@ public class GTFSRealtimeProviderImpl {
         position.setLongitude((float) lon);
 
         VehiclePosition.Builder vehiclePosition = VehiclePosition.newBuilder();
-        //FIXME: this should be UTC, not local time.
         vehiclePosition.setTimestamp(dateTime.getTime() / 1000L);
         vehiclePosition.setPosition(position);
         vehiclePosition.setTrip(tripDescriptor);

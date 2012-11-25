@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 
 /**
  *
@@ -28,7 +29,7 @@ import java.util.Date;
 public class WMATABusPosition implements Serializable {
 
     private static final long serialVersionUID = 1L;
-    private final SimpleDateFormat parseFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+    private final SimpleDateFormat parseFormat;
     public Date dateTime;
     public float deviation;
     public int directionNum;
@@ -154,5 +155,10 @@ public class WMATABusPosition implements Serializable {
 
     public void setVehicleID(String vehicleID) {
         this.vehicleID = vehicleID;
+    }
+
+    public WMATABusPosition() {
+        parseFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+        parseFormat.setTimeZone(TimeZone.getTimeZone("US/Eastern"));
     }
 }

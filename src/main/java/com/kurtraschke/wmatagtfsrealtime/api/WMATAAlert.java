@@ -17,7 +17,10 @@
 package com.kurtraschke.wmatagtfsrealtime.api;
 
 import java.io.Serializable;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 import java.util.UUID;
 
 /**
@@ -27,6 +30,7 @@ import java.util.UUID;
 public class WMATAAlert implements Serializable {
 
     private static final long serialVersionUID = 1L;
+    private final SimpleDateFormat parseFormat;
     private String title;
     private String link;
     private String description;
@@ -70,8 +74,8 @@ public class WMATAAlert implements Serializable {
         return pubDate;
     }
 
-    public void setPubDate(String pubDate) {
-        //this.pubDate = pubDate;
+    public void setPubDate(String pubDate) throws ParseException {
+        this.pubDate = parseFormat.parse(pubDate);
     }
 
     public UUID getGuid() {
@@ -80,5 +84,10 @@ public class WMATAAlert implements Serializable {
 
     public void setGuid(String guid) {
         this.guid = UUID.fromString(guid);
+    }
+
+    public WMATAAlert() {
+        parseFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss z");
+        parseFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
     }
 }
