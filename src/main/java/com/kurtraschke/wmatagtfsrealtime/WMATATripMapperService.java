@@ -59,7 +59,8 @@ public class WMATATripMapperService {
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
     private Cache _tripCache;
     private Cache _stopByIDCache;
-    private final boolean DEBUG_MAPPING = false;
+    
+    private static int NOT_MAPPED = -1;
 
     @Inject
     public void setWMATARouteMapperService(WMATARouteMapperService mapperService) {
@@ -108,9 +109,15 @@ public class WMATATripMapperService {
 
             TripsForRouteQueryBean tfrqb = new TripsForRouteQueryBean();
 
+            long tripTime = thisTrip.getStopTimes().get(0).getTime().getTime();
+
+            tripTime += (10 * 60 * 1000);
+
             tfrqb.setRouteId(mappedRouteID);
-            tfrqb.setTime(thisTrip.getStopTimes().get(0).getTime().getTime());
+            tfrqb.setTime(tripTime);
             tfrqb.setInclusion(new TripDetailsInclusionBean(true, true, false));
+
+            _log.debug("Querying for trips on route " + mappedRouteID + " at time " + tripTime);
 
             List<TripDetailsBean> candidateTrips = _tds.getService().getTripsForRoute(tfrqb).getList();
 
@@ -122,7 +129,9 @@ public class WMATATripMapperService {
 
                     double score = scoreTripMatch(serviceDate, thisTrip, t);
 
-                    scoredTrips.add(new TripScoreKey(score, t));
+                    if (score >= 0) {
+                        scoredTrips.add(new TripScoreKey(score, t));
+                    }
 
                 }
 
@@ -134,7 +143,7 @@ public class WMATATripMapperService {
 
                 TripDetailsBean bestTrip = bestMatch.trip;
 
-                if (bestMatch.score > 0 && bestMatch.score < 25000) {
+                if (bestMatch.score < 10000) {
                     _log.info("Mapped WMATA trip " + tripID + " to GTFS trip " + bestTrip.getTripId());
                     _tripCache.put(new Element(new TripMapKey(serviceDate, tripID), bestTrip.getTripId()));
                 } else {
@@ -178,7 +187,10 @@ public class WMATATripMapperService {
                             (baseTime + gst.getArrivalTime()) * 1000L,
                             thisStop,
                             st.getTime().getTime());
-                    options.add(new StopTimeScoreKey(score, gst));
+
+                    if (score < 500) {
+                        options.add(new StopTimeScoreKey(score, gst));
+                    }
 
                 }
 
@@ -196,31 +208,34 @@ public class WMATATripMapperService {
 
         }
 
-        if (DEBUG_MAPPING) {
-            System.out.println("Mapping for WMATA trip " + wmataTrip.getTripID() + " to GTFS trip " + gtfsTrip.getTripId());
-            for (Map.Entry<WMATAStopTime, StopTimeScoreKey> e : stopTimeMap.entrySet()) {
-                WMATAStopTime w = e.getKey();
-                TripStopTimeBean g = e.getValue().stopTime;
-                double score = e.getValue().score;
+        _log.debug("Mapping for WMATA trip " + wmataTrip.getTripID() + " to GTFS trip " + gtfsTrip.getTripId());
+        for (Map.Entry<WMATAStopTime, StopTimeScoreKey> e : stopTimeMap.entrySet()) {
+            WMATAStopTime w = e.getKey();
+            TripStopTimeBean g = e.getValue().stopTime;
+            double score = e.getValue().score;
 
-                System.out.println("W: " + w.getStopName() + " " + w.getTime() + "\nG: " + g.getStop().getName() + " " + new Date((baseTime + g.getArrivalTime()) * 1000L) + " " + score);
+            _log.debug("W: " + w.getStopName() + " " + w.getTime());
+            _log.debug("G: " + g.getStop().getName() + " " + new Date((baseTime + g.getArrivalTime()) * 1000L));
+            _log.debug(Double.toString(score));
+        }
+
+        if (stopTimeMap.size() > 0) {
+            double score = 0;
+
+            for (StopTimeScoreKey v : stopTimeMap.values()) {
+                score += v.score;
             }
-        }
+            _log.debug("Total score is " + score);
 
-        double score = 0;
-        for (StopTimeScoreKey v : stopTimeMap.values()) {
-            score += v.score;
+            return score;
+
+        } else {
+            return NOT_MAPPED;
         }
-        if (DEBUG_MAPPING) {
-            System.out.println("Total score is " + score);
-        }
-        return score;
 
     }
 
     private static double distance(double lat1, double lon1, double lat2, double lon2) {
-        //int radius = 6371;
-
         int radius = 20902200;
 
         double dlat = Math.toRadians(lat2 - lat1);
@@ -234,9 +249,6 @@ public class WMATATripMapperService {
 
     private static double stopDistanceMetric(StopBean gtfsStop, long gtfsStopTime, WMATAStop wmataStop, long wmataStopTime) {
         double d = distance(gtfsStop.getLat(), gtfsStop.getLon(), wmataStop.getLat(), wmataStop.getLon());
-
-        //return Math.sqrt(Math.pow(d, 2) + Math.pow(((gtfsStopTime / 1000) - (wmataStopTime / 1000)), 2));
-
 
         return Math.sqrt((4 * Math.pow(d, 2)) + Math.pow(((gtfsStopTime / 1000) - (wmataStopTime / 1000)), 2));
 

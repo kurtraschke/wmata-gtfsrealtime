@@ -6,15 +6,18 @@
     
     <diskStore path="java.io.tmpdir"/>
     
-    <!-- Eventually some of these will have diskPersistent turned on,
-         so that the state of the mappings is preserved across restarts. -->
+    <!-- Cache selected responses from the WMATA API for 24 hours. -->
     <cache name="wmataapi" overflowToDisk="true" diskPersistent="true" timeToIdleSeconds="86400" maxEntriesLocalHeap="5" />
     
-    <cache name="wmatabusroute" overflowToDisk="false" diskPersistent="false" timeToIdleSeconds="3600" maxEntriesLocalHeap="500" />
-    <cache name="wmatarailroute" overflowToDisk="false" diskPersistent="false" timeToIdleSeconds="3600" maxEntriesLocalHeap="10" />
+    <!-- Cache mappings of WMATA bus and rail routes to GTFS for 1 hour. -->
+    <cache name="wmatabusroute" overflowToDisk="false" diskPersistent="true" timeToIdleSeconds="3600" maxEntriesLocalHeap="500" />
+    <cache name="wmatarailroute" overflowToDisk="false" diskPersistent="true" timeToIdleSeconds="3600" maxEntriesLocalHeap="10" />
     
-    <cache name="wmatatrip" overflowToDisk="false" diskPersistent="false" timeToIdleSeconds="3600" maxEntriesLocalHeap="1000" />
-    <cache name="wmatastopbyid" overflowToDisk="true" diskPersistent="false" timeToIdleSeconds="3600" maxEntriesLocalHeap="5000" />
+    <!-- Cache mappings of WMATA trips to GTFS for 1 hour. -->
+    <cache name="wmatatrip" overflowToDisk="false" diskPersistent="true" timeToIdleSeconds="3600" maxEntriesLocalHeap="1000" />
+    
+    <!-- Cache WMATA stops by ID and last stop for trips in RAM only. -->
+    <cache name="wmatastopbyid" overflowToDisk="false" diskPersistent="false" timeToIdleSeconds="3600" maxEntriesLocalHeap="5000" />    
     <cache name="wmatalaststopfortrip" overflowToDisk="false" diskPersistent="false" timeToIdleSeconds="3600" maxEntriesLocalHeap="1000" />
     
 </ehcache>
