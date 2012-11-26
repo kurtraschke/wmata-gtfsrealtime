@@ -39,8 +39,8 @@ public class WMATABusPosition implements Serializable {
     public String routeID;
     public String tripHeadsign;
     public String tripID;
-    public String tripStartTime;
-    public String tripEndTime;
+    public Date tripStartTime;
+    public Date tripEndTime;
     public String vehicleID;
 
     public Date getDateTime() {
@@ -133,20 +133,20 @@ public class WMATABusPosition implements Serializable {
         this.tripID = tripID;
     }
 
-    public String getTripStartTime() {
+    public Date getTripStartTime() {
         return tripStartTime;
     }
 
-    public void setTripStartTime(String tripStartTime) {
-        this.tripStartTime = tripStartTime;
+    public void setTripStartTime(String tripStartTime) throws ParseException {
+        this.tripStartTime = parseFormat.parse(tripStartTime);
     }
 
-    public String getTripEndTime() {
+    public Date getTripEndTime() {
         return tripEndTime;
     }
 
-    public void setTripEndTime(String tripEndTime) {
-        this.tripEndTime = tripEndTime;
+    public void setTripEndTime(String tripEndTime) throws ParseException {
+        this.tripEndTime = parseFormat.parse(tripEndTime);
     }
 
     public String getVehicleID() {

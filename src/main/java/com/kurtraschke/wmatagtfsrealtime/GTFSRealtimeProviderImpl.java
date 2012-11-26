@@ -231,15 +231,8 @@ public class GTFSRealtimeProviderImpl {
         gtfsRouteID = _routeMapperService.getBusRouteMapping(route);
 
         if (gtfsRouteID != null) {
-            /*
-             * Assuming that the service date is today's date is naive;
-             * it will fail in both of the following two cases:
-             *  - after midnight, when a trip's service date is the previous
-             *    day
-             *  - before midnight, when a trip is scheduled on the following
-             *    service day (MTA NYCT is known to do this)
-             */
             GregorianCalendar serviceDate = new GregorianCalendar();
+            serviceDate.setTime(bp.getTripStartTime());
             serviceDate.set(Calendar.HOUR_OF_DAY, 0);
             serviceDate.set(Calendar.MINUTE, 0);
             serviceDate.set(Calendar.SECOND, 0);
