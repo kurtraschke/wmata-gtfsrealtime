@@ -83,8 +83,10 @@ public class GTFSRealtimeProviderImpl {
     private Cache _lastStopForTripCache;
     private Cache _alertIDCache;
     /**
-     * How often vehicle data will be downloaded, in seconds. FIXME: move this
-     * into the configuration file.
+     * How often vehicle data will be downloaded, in seconds.
+     */
+    /*
+     * FIXME: move this into the configuration file.
      */
     private int _refreshInterval = 30;
 
@@ -192,10 +194,10 @@ public class GTFSRealtimeProviderImpl {
         for (WMATABusPosition bp : busPositions) {
 
             try {
-            ProcessedVehicleResponse pvr = processVehicle(bp);
+                ProcessedVehicleResponse pvr = processVehicle(bp);
 
-            tripUpdates.addEntity(pvr.tripUpdateEntity);
-            vehiclePositions.addEntity(pvr.vehiclePositionEntity);
+                tripUpdates.addEntity(pvr.tripUpdateEntity);
+                vehiclePositions.addEntity(pvr.vehiclePositionEntity);
             } catch (Exception e) {
                 _log.warn("Error constructing update for vehicle " + bp.getVehicleID(), e);
             }
@@ -335,12 +337,11 @@ public class GTFSRealtimeProviderImpl {
         return id.split("_", 2)[1];
     }
 
+    @SuppressWarnings("unchecked")
     private void refreshAlerts() throws IOException, SAXException {
 
         List<WMATAAlert> busAlerts = _api.downloadBusAlerts();
         List<WMATAAlert> railAlerts = _api.downloadRailAlerts();
-
-        Set<String> alertsInUpdate = new HashSet<String>();
 
         FeedMessage.Builder alerts = GtfsRealtimeLibrary.createFeedMessageBuilder();
 

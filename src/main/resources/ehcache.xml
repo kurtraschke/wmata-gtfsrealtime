@@ -7,7 +7,7 @@
     <diskStore path="java.io.tmpdir"/>
     
     <!-- Cache selected responses from the WMATA API for 24 hours. -->
-    <cache name="wmataapi" overflowToDisk="true" diskPersistent="true" timeToIdleSeconds="86400" maxEntriesLocalHeap="5" />
+    <cache name="wmataapi" overflowToDisk="true" diskPersistent="true" timeToLiveSeconds="86400" maxEntriesLocalHeap="5" />
     
     <!-- Cache mappings of WMATA bus and rail routes to GTFS for 1 hour. -->
     <cache name="wmatabusroute" overflowToDisk="false" diskPersistent="true" timeToIdleSeconds="3600" maxEntriesLocalHeap="500" />

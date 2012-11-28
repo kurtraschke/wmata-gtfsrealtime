@@ -51,6 +51,7 @@ public class WMATARealtimeMain {
     private static final String ARG_CONFIG_FILE = "config";
 
     public static void main(String[] args) throws Exception {
+        System.setProperty("net.sf.ehcache.enableShutdownHook", "true");
         WMATARealtimeMain m = new WMATARealtimeMain();
         m.run(args);
     }
@@ -147,6 +148,10 @@ public class WMATARealtimeMain {
     }
 
     protected void buildOptions(Options options) {
+        /*
+         * FIXME: make the configuration file a required option;
+         * consider moving the rest into the configuration file.
+         */
         options.addOption(ARG_TRIP_UPDATES_PATH, true, "trip updates path");
         options.addOption(ARG_TRIP_UPDATES_URL, true, "trip updates url");
         options.addOption(ARG_VEHICLE_POSITIONS_PATH, true,

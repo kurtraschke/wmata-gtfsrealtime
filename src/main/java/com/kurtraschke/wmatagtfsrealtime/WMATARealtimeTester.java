@@ -16,6 +16,8 @@
  */
 package com.kurtraschke.wmatagtfsrealtime;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -24,6 +26,7 @@ import java.text.SimpleDateFormat;
 import java.util.HashSet;
 import java.util.Set;
 import javax.inject.Inject;
+import net.sf.ehcache.CacheManager;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Options;
@@ -31,6 +34,9 @@ import org.apache.commons.cli.Parser;
 import org.nnsoft.guice.rocoto.Rocoto;
 import org.nnsoft.guice.rocoto.configuration.ConfigurationModule;
 import org.onebusaway.cli.CommandLineInterfaceLibrary;
+import org.onebusaway.guice.jsr250.LifecycleService;
+import org.slf4j.LoggerFactory;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 
 public class WMATARealtimeTester {
 
@@ -38,12 +44,24 @@ public class WMATARealtimeTester {
     private static final String ARG_SERVICE_DATE = "serviceDate";
     private static final String ARG_TRIP_ID = "tripID";
     private static final String ARG_ROUTE_ID = "routeID";
+    private LifecycleService _lifecycleService;
+    private WMATATripMapperService _service;
+    private CacheManager _cacheManager;
 
     public static void main(String[] args) throws Exception {
-        WMATARealtimeMain m = new WMATARealtimeMain();
-        m.run(args);
+        WMATARealtimeTester t = new WMATARealtimeTester();
+        t.run(args);
     }
-    private WMATATripMapperService _service;
+
+    @Inject
+    public void setLifecycleService(LifecycleService lifecycleService) {
+        _lifecycleService = lifecycleService;
+    }
+
+    @Inject
+    public void setCacheManager(CacheManager cacheManager) {
+        _cacheManager = cacheManager;
+    }
 
     @Inject
     public void setWMATATripMapperService(WMATATripMapperService service) {
@@ -51,6 +69,15 @@ public class WMATARealtimeTester {
     }
 
     public void run(String[] args) throws Exception {
+        //The Hessian client uses java.util.logging, so we bridge it to
+        //slf4j, so all logging is funneled into logback.
+        SLF4JBridgeHandler.removeHandlersForRootLogger();
+        SLF4JBridgeHandler.install();
+
+
+        //Force on debug logging (otherwise disabled in logback.xml)
+        Logger root = (Logger) LoggerFactory.getLogger(WMATATripMapperService.class);
+        root.setLevel(Level.ALL);
 
         if (args.length == 0 || CommandLineInterfaceLibrary.wantsHelp(args)) {
             printUsage();
@@ -79,11 +106,15 @@ public class WMATARealtimeTester {
         },
                 Rocoto.expandVariables(modules));
         injector.injectMembers(this);
+        _lifecycleService.start();
+
 
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         String mappedTripID = _service.getTripMapping(dateFormat.parse(cli.getOptionValue(ARG_SERVICE_DATE)),
-                                     cli.getOptionValue(ARG_TRIP_ID), cli.getOptionValue(ARG_ROUTE_ID));
+                cli.getOptionValue(ARG_TRIP_ID), cli.getOptionValue(ARG_ROUTE_ID));
         System.out.println(mappedTripID);
+        _cacheManager.shutdown();
+        _lifecycleService.stop();
     }
 
     private void printUsage() {

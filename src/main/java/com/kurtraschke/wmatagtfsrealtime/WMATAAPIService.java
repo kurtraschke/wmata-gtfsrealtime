@@ -145,8 +145,6 @@ public class WMATAAPIService {
         routeScheduleDigester.addSetNext("RouteScheduleInfo/Direction1/Trip/StopTimes/StopTime", "addStopTime");
         routeScheduleDigester.addSetNext("RouteScheduleInfo/Direction1/Trip", "addDirection1Trip");
 
-
-
         return routeScheduleDigester;
     }
 
@@ -170,7 +168,6 @@ public class WMATAAPIService {
 
         busPositionDigester.addSetNext("BusPositionsResp/BusPositions/BusPosition", "add");
 
-
         return busPositionDigester;
     }
 
@@ -190,7 +187,6 @@ public class WMATAAPIService {
         alertDigester.addSetNext("rss/channel/item", "add");
 
         return alertDigester;
-
     }
 
     @Inject
