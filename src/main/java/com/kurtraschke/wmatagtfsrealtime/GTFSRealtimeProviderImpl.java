@@ -247,10 +247,7 @@ public class GTFSRealtimeProviderImpl {
          */
         TripDescriptor.Builder tripDescriptor = TripDescriptor.newBuilder();
         if (gtfsRouteID != null) {
-            /* FIXME: OBA wrongly rejects TripUpdates which have a route ID set.
-             * Fix OBA then come back here and fix this.
-             */
-            //tripDescriptor.setRouteId(stripID(gtfsRouteID));
+            tripDescriptor.setRouteId(stripID(gtfsRouteID));
         }
         if (gtfsTripID != null) {
             tripDescriptor.setTripId(stripID(gtfsTripID));
