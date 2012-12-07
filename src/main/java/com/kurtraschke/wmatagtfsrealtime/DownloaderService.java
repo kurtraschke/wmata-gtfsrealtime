@@ -17,6 +17,7 @@
  */
 package com.kurtraschke.wmatagtfsrealtime;
 
+import com.google.common.util.concurrent.RateLimiter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.zip.GZIPInputStream;
@@ -27,31 +28,22 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
- * All calls to the WMATA API go through this class, which keeps a running tab
- * on our downloading throughput to make sure we don't exceed the call rate
- * limit set for the API.
+ * All calls to the WMATA API go through this class, which ensures that the
+ * API rate limit is respected.
  *
  * @author bdferris
  */
 @Singleton
 public class DownloaderService {
 
-    private static final Logger _log = LoggerFactory.getLogger(DownloaderService.class);
     private DefaultHttpClient _client = new DefaultHttpClient();
-
-    /**
-     * Time, in seconds
-     */
-    private long lastCall = 0;
-    private int callsSoFar;
+    private RateLimiter _limiter = RateLimiter.create(5.0);
 
     public synchronized InputStream openUrl(String uri) throws IOException {
 
-        stallIfNeeded();
+        _limiter.acquire();
 
         HttpUriRequest request = new HttpGet(uri);
         request.addHeader("Accept-Encoding", "gzip");
@@ -65,27 +57,5 @@ public class DownloaderService {
             in = new GZIPInputStream(in);
         }
         return in;
-    }
-
-    private void stallIfNeeded() {
-
-        long now = System.currentTimeMillis() / 1000;
-
-        if (now > lastCall) {
-            lastCall = now;
-            callsSoFar = 1;
-        } else {
-
-            if (callsSoFar >= 5) {
-                int delay = (int) (1.5 * 1000);
-                _log.info("thottling: delay=" + delay);
-                try {
-                    Thread.sleep(delay);
-                } catch (InterruptedException e) {
-                }
-            } else {
-                callsSoFar++;
-            }
-        }
     }
 }
