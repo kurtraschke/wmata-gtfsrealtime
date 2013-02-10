@@ -31,13 +31,13 @@ import org.apache.commons.cli.Parser;
 import org.nnsoft.guice.rocoto.Rocoto;
 import org.nnsoft.guice.rocoto.configuration.ConfigurationModule;
 import org.onebusaway.cli.CommandLineInterfaceLibrary;
+import org.onebusaway.gtfs_realtime.exporter.AlertsFileWriter;
+import org.onebusaway.gtfs_realtime.exporter.AlertsServlet;
+import org.onebusaway.gtfs_realtime.exporter.TripUpdatesFileWriter;
+import org.onebusaway.gtfs_realtime.exporter.TripUpdatesServlet;
+import org.onebusaway.gtfs_realtime.exporter.VehiclePositionsFileWriter;
+import org.onebusaway.gtfs_realtime.exporter.VehiclePositionsServlet;
 import org.onebusaway.guice.jsr250.LifecycleService;
-import org.onebusway.gtfs_realtime.exporter.AlertsFileWriter;
-import org.onebusway.gtfs_realtime.exporter.AlertsServlet;
-import org.onebusway.gtfs_realtime.exporter.TripUpdatesFileWriter;
-import org.onebusway.gtfs_realtime.exporter.TripUpdatesServlet;
-import org.onebusway.gtfs_realtime.exporter.VehiclePositionsFileWriter;
-import org.onebusway.gtfs_realtime.exporter.VehiclePositionsServlet;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
 public class WMATARealtimeMain {

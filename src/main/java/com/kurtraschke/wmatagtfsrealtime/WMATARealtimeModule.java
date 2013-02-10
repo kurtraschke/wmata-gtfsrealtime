@@ -22,8 +22,8 @@ import com.google.inject.name.Names;
 import java.util.Set;
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
+import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeExporterModule;
 import org.onebusaway.guice.jsr250.JSR250Module;
-import org.onebusway.gtfs_realtime.exporter.GtfsRealtimeExporterModule;
 
 public class WMATARealtimeModule extends AbstractModule {
 
