@@ -57,9 +57,11 @@ public class WMATARouteMapperService {
     private final Predicate<String> matchBadRoutes = Predicates.in(Arrays.asList(BAD_ROUTES));
 
     static {
-        overrideMappings.put("R99", "3030-2_259");
-        overrideMappings.put("R99v1", "3030-2_259");
-        overrideMappings.put("REX", "3030-2_259");
+        overrideMappings.put("R99", "3030-2_260");
+        overrideMappings.put("R99v1", "3030-2_260");
+        overrideMappings.put("REX", "3030-2_260");
+        overrideMappings.put("S80", "3030-2_273");
+        overrideMappings.put("S91", "3030-2_273");
     }
 
     @Inject
