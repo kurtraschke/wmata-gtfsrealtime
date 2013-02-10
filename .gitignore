@@ -8,3 +8,4 @@ target/
 *.ear
 
 config
+dependency-reduced-pom.xml
