@@ -24,6 +24,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
@@ -45,24 +47,13 @@ public class WMATARouteMapperService {
     private TransitDataServiceService _tds;
     private Cache _busRouteCache;
     private Cache _railRouteCache;
+    private String[] badRoutes;
+    private final Pattern routeExtract = Pattern.compile("^([A-Z0-9]+)(c?v?S?[0-9]?).*$");
+    private Map<String, String> staticMappings = new HashMap<String, String>();
+    private Predicate<String> matchBadRoutes;
     @Inject
     @Named("WMATA.agencyID")
     private String AGENCY_ID;
-    private final String[] BAD_ROUTES = new String[]{"B99", "F99", "F99c", "F99v1",
-        "L99", "P99", "PATBL", "PATFM", "PATLA", "PATMG", "PATNO",
-        "PATRO", "PATSH", "PATSO", "PATWN", "PATWO", "SH99", "W99",
-        "W99v1"};
-    private final static Map<String, String> overrideMappings = new HashMap<String, String>();
-    private final Pattern routeExtract = Pattern.compile("^([A-Z0-9]+)(c?v?S?[0-9]?).*$");
-    private final Predicate<String> matchBadRoutes = Predicates.in(Arrays.asList(BAD_ROUTES));
-
-    static {
-        overrideMappings.put("R99", "3030-2_260");
-        overrideMappings.put("R99v1", "3030-2_260");
-        overrideMappings.put("REX", "3030-2_260");
-        overrideMappings.put("S80", "3030-2_273");
-        overrideMappings.put("S91", "3030-2_273");
-    }
 
     @Inject
     public void setTransitDataServiceService(TransitDataServiceService tds) {
@@ -72,19 +63,29 @@ public class WMATARouteMapperService {
     @Inject
     public void setBusRouteCache(@Named("caches.busRoute") Cache cache) {
         _busRouteCache = cache;
-
     }
 
     @Inject
     public void setRailRouteCache(@Named("caches.railRoute") Cache cache) {
         _railRouteCache = cache;
+    }
 
+    @Inject
+    public void setBadRoutes(@Named("WMATA.badRoutes") String badRoutesString) {
+        badRoutes = badRoutesString.split(",");
+        matchBadRoutes = Predicates.in(Arrays.asList(badRoutes));
+    }
+
+    @Inject
+    public void setStaticMappings(@Named("WMATA.staticMappings") Properties staticMappingProperties) {
+        for (String key : staticMappingProperties.stringPropertyNames()) {
+            staticMappings.put(key, staticMappingProperties.getProperty(key));
+        }
     }
 
     private String mapBusRoute(String routeID) {
-
-        if (overrideMappings.containsKey(routeID)) {
-            String mappedRouteID = overrideMappings.get(routeID);
+        if (staticMappings.containsKey(routeID)) {
+            String mappedRouteID = staticMappings.get(routeID);
             _log.info("Mapped WMATA route " + routeID + " to GTFS route " + mappedRouteID + " (using override)");
             return mappedRouteID;
         }

@@ -110,7 +110,6 @@ public class WMATAAPIService {
         routeScheduleDigester.addCallMethod("RouteScheduleInfo/Direction0/Trip/TripHeadsign", "setTripHeadsign", 0);
         routeScheduleDigester.addCallMethod("RouteScheduleInfo/Direction0/Trip/TripID", "setTripID", 0);
 
-
         routeScheduleDigester.addObjectCreate("RouteScheduleInfo/Direction0/Trip/StopTimes/StopTime", WMATAStopTime.class);
 
         routeScheduleDigester.addCallMethod("RouteScheduleInfo/Direction0/Trip/StopTimes/StopTime/StopID", "setStopID", 0);
@@ -118,10 +117,8 @@ public class WMATAAPIService {
         routeScheduleDigester.addCallMethod("RouteScheduleInfo/Direction0/Trip/StopTimes/StopTime/StopSeq", "setStopSeq", 0);
         routeScheduleDigester.addCallMethod("RouteScheduleInfo/Direction0/Trip/StopTimes/StopTime/Time", "setTime", 0);
 
-
         routeScheduleDigester.addSetNext("RouteScheduleInfo/Direction0/Trip/StopTimes/StopTime", "addStopTime");
         routeScheduleDigester.addSetNext("RouteScheduleInfo/Direction0/Trip", "addDirection0Trip");
-
 
         routeScheduleDigester.addObjectCreate("RouteScheduleInfo/Direction1/Trip", WMATATrip.class);
 
@@ -133,14 +130,12 @@ public class WMATAAPIService {
         routeScheduleDigester.addCallMethod("RouteScheduleInfo/Direction1/Trip/TripHeadsign", "setTripHeadsign", 0);
         routeScheduleDigester.addCallMethod("RouteScheduleInfo/Direction1/Trip/TripID", "setTripID", 0);
 
-
         routeScheduleDigester.addObjectCreate("RouteScheduleInfo/Direction1/Trip/StopTimes/StopTime", WMATAStopTime.class);
 
         routeScheduleDigester.addCallMethod("RouteScheduleInfo/Direction1/Trip/StopTimes/StopTime/StopID", "setStopID", 0);
         routeScheduleDigester.addCallMethod("RouteScheduleInfo/Direction1/Trip/StopTimes/StopTime/StopName", "setStopName", 0);
         routeScheduleDigester.addCallMethod("RouteScheduleInfo/Direction1/Trip/StopTimes/StopTime/StopSeq", "setStopSeq", 0);
         routeScheduleDigester.addCallMethod("RouteScheduleInfo/Direction1/Trip/StopTimes/StopTime/Time", "setTime", 0);
-
 
         routeScheduleDigester.addSetNext("RouteScheduleInfo/Direction1/Trip/StopTimes/StopTime", "addStopTime");
         routeScheduleDigester.addSetNext("RouteScheduleInfo/Direction1/Trip", "addDirection1Trip");
@@ -164,7 +159,6 @@ public class WMATAAPIService {
         busPositionDigester.addCallMethod("BusPositionsResp/BusPositions/BusPosition/TripStartTime", "setTripStartTime", 0);
         busPositionDigester.addCallMethod("BusPositionsResp/BusPositions/BusPosition/TripEndTime", "setTripEndTime", 0);
         busPositionDigester.addCallMethod("BusPositionsResp/BusPositions/BusPosition/VehicleID", "setVehicleID", 0);
-
 
         busPositionDigester.addSetNext("BusPositionsResp/BusPositions/BusPosition", "add");
 

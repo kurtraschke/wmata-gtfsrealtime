@@ -6,19 +6,19 @@
     
     <diskStore path="java.io.tmpdir"/>
     
-    <!-- Cache selected responses from the WMATA API for 24 hours. -->
-    <cache name="wmataapi" overflowToDisk="true" diskPersistent="true" timeToLiveSeconds="86400" maxEntriesLocalHeap="5" />
+    <!-- Cache selected responses from the WMATA API for 6 hours. -->
+    <cache name="wmataapi" overflowToDisk="true" diskPersistent="true" timeToLiveSeconds="21600" maxEntriesLocalHeap="50" />
     
     <!-- Cache mappings of WMATA bus and rail routes to GTFS for 1 hour. -->
     <cache name="wmatabusroute" overflowToDisk="false" diskPersistent="true" timeToIdleSeconds="3600" maxEntriesLocalHeap="500" />
     <cache name="wmatarailroute" overflowToDisk="false" diskPersistent="true" timeToIdleSeconds="3600" maxEntriesLocalHeap="10" />
     
     <!-- Cache mappings of WMATA trips to GTFS for 1 hour. -->
-    <cache name="wmatatrip" overflowToDisk="false" diskPersistent="true" timeToIdleSeconds="3600" maxEntriesLocalHeap="1000" />
+    <cache name="wmatatrip" overflowToDisk="false" diskPersistent="true" timeToIdleSeconds="3600" maxEntriesLocalHeap="5000" />
     
-    <!-- Cache WMATA stops by ID and last stop for trips in RAM only. -->
+    <!-- Cache WMATA stops by ID and first stop for trips in RAM only. -->
     <cache name="wmatastopbyid" overflowToDisk="false" diskPersistent="false" timeToIdleSeconds="3600" maxEntriesLocalHeap="5000" />    
-    <cache name="wmatalaststopfortrip" overflowToDisk="false" diskPersistent="false" timeToIdleSeconds="3600" maxEntriesLocalHeap="1000" />
+    <cache name="wmatafirststopfortrip" overflowToDisk="false" diskPersistent="false" timeToIdleSeconds="3600" maxEntriesLocalHeap="5000" />
     
     <!-- Cache IDs of alerts so we can mark them as deleted once removed. -->
     <cache name="wmataalertid" overflowToDisk="false" diskPersistent="true" timeToLiveSeconds="172800" maxEntriesLocalHeap="500" />

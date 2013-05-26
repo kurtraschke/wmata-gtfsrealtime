@@ -162,6 +162,8 @@
                                     <mainClass>com.kurtraschke.wmatagtfsrealtime.WMATARealtimeMain</mainClass>
                                 </transformer>
                             </transformers>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>withAllDependencies</shadedClassifierName>
                         </configuration>
                     </execution>
                 </executions>

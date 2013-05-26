@@ -158,8 +158,8 @@ public class GTFSRealtimeProviderImpl {
     }
 
     /**
-     * **
-     * Private Methods - Here is where the real work happens **
+     *
+     * Private Methods - Here is where the real work happens
      */
     /**
      * This method downloads the latest vehicle data, processes each vehicle in
@@ -170,7 +170,7 @@ public class GTFSRealtimeProviderImpl {
 
 
         /**
-         * We download the vehicle details as an array of JSON objects.
+         * We download the vehicle details as an array of objects.
          */
         List<WMATABusPosition> busPositions = _api.downloadBusPositions();
 
@@ -183,7 +183,7 @@ public class GTFSRealtimeProviderImpl {
         FeedMessage.Builder vehiclePositions = GtfsRealtimeLibrary.createFeedMessageBuilder();
 
         /**
-         * We iterate over every JSON vehicle object.
+         * We iterate over every vehicle object.
          */
         for (WMATABusPosition bp : busPositions) {
 
@@ -193,14 +193,14 @@ public class GTFSRealtimeProviderImpl {
                 tripUpdates.addEntity(pvr.tripUpdateEntity);
                 vehiclePositions.addEntity(pvr.vehiclePositionEntity);
             } catch (Exception e) {
-                _log.warn("Error constructing update for vehicle " + bp.getVehicleID(), e);
+                _log.warn("Error constructing update for vehicle " + bp.getVehicleID() + " on route " + bp.getRouteID() + " to " + bp.getTripHeadsign(), e);
             }
 
 
         }
 
-        /**
-         * Build out the final GTFS-realtime feed messagse and save them.
+        /*
+         * Build out the final GTFS-realtime feed messages and save them.
          */
         _gtfsRealtimeProvider.setTripUpdates(tripUpdates.build());
         _gtfsRealtimeProvider.setVehiclePositions(vehiclePositions.build());
@@ -209,7 +209,6 @@ public class GTFSRealtimeProviderImpl {
     }
 
     private ProcessedVehicleResponse processVehicle(WMATABusPosition bp) throws IOException, SAXException {
-
         ProcessedVehicleResponse pvr = new ProcessedVehicleResponse();
 
         String route = bp.getRouteID();
@@ -366,7 +365,6 @@ public class GTFSRealtimeProviderImpl {
         }
 
         for (WMATAAlert railAlert : railAlerts) {
-
             Alert.Builder alert = Alert.newBuilder();
 
             alert.setDescriptionText(GtfsRealtimeLibrary.getTextAsTranslatedString(railAlert.getDescription()));
@@ -395,6 +393,7 @@ public class GTFSRealtimeProviderImpl {
         }
 
         Set<String> currentAlertIDs = new HashSet<String>();
+
         for (FeedEntity e : alerts.getEntityList()) {
             currentAlertIDs.add(e.getId());
         }

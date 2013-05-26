@@ -93,12 +93,9 @@ public class WMATATripMapperService {
     private String mapTrip(Date serviceDate, final String tripID, String routeID) throws IOException, SAXException {
         String mappedRouteID = _routeMapperService.getBusRouteMapping(routeID);
 
-
         if (mappedRouteID != null) {
-
             WMATARouteScheduleInfo rsi = _api.downloadRouteScheduleInfo(routeID, dateFormat.format(serviceDate));
-
-
+            
             List<WMATATrip> routeTrips = rsi.getTrips();
 
             WMATATrip thisTrip = Iterables.find(routeTrips, new Predicate<WMATATrip>() {
@@ -253,6 +250,7 @@ public class WMATATripMapperService {
 
         }
 
+        /*
         _log.debug("Mapping for WMATA trip " + wmataTrip.getTripID() + " to GTFS trip " + gtfsTrip.getTripId());
         for (Map.Entry<WMATAStopTime, StopTimeScoreKey> e : stopTimeMap.entrySet()) {
             WMATAStopTime w = e.getKey();
@@ -263,6 +261,7 @@ public class WMATATripMapperService {
             _log.debug("G: " + g.getStop().getName() + " " + new Date((baseTime + g.getArrivalTime()) * 1000L));
             _log.debug(Double.toString(score));
         }
+        */
 
         /* Require that at least 40% of a trip's stoptimes be mapped
          * in order to return a result.
