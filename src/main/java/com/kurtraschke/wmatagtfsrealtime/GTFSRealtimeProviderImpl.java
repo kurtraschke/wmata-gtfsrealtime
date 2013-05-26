@@ -85,10 +85,12 @@ public class GTFSRealtimeProviderImpl {
     /**
      * How often vehicle data will be downloaded, in seconds.
      */
-    /*
-     * FIXME: move this into the configuration file.
-     */
-    private int _refreshInterval = 30;
+    @Inject
+    @Named("refreshInterval.vehicles")
+    private int _vehicleRefreshInterval;
+    @Inject
+    @Named("refreshInterval.alerts")
+    private int _alertRefreshInterval;
 
     @Inject
     public void setGtfsRealtimeProvider(GtfsRealtimeMutableProvider gtfsRealtimeProvider) {
@@ -131,26 +133,18 @@ public class GTFSRealtimeProviderImpl {
     }
 
     /**
-     * @param refreshInterval how often vehicle data will be downloaded, in
-     * seconds.
-     */
-    public void setRefreshInterval(int refreshInterval) {
-        _refreshInterval = refreshInterval;
-    }
-
-    /**
      * The start method automatically starts up a recurring task that
-     * periodically downloads the latest vehicle data from the SEPTA vehicle
-     * stream and processes them.
+     * periodically downloads the latest vehicle and alert data from the WMATA
+     * API and processes them.
      */
     @PostConstruct
     public void start() {
         _log.info("starting GTFS-realtime service");
         _executor = Executors.newSingleThreadScheduledExecutor();
         _executor.scheduleWithFixedDelay(new VehiclesRefreshTask(), 0,
-                _refreshInterval, TimeUnit.SECONDS);
+                _vehicleRefreshInterval, TimeUnit.SECONDS);
         _executor.scheduleWithFixedDelay(new AlertsRefreshTask(), 0,
-                2 * _refreshInterval, TimeUnit.SECONDS);
+                _alertRefreshInterval, TimeUnit.SECONDS);
     }
 
     /**
