@@ -1,4 +1,11 @@
 WMATA.key=
-WMATA.agencyID=
+WMATA.agencyID=3030-2
+WMATA.badRoutes=B99,F99,F99c,F99v1,L99,P99,PATBL,PATFM,PATLA,PATMG,PATNO,PATRO,PATSH,PATSO,PATWN,PATWO,SH99
+WMATA.staticMappings=R99=3030-2_260\nR99v1=3030-2_260\nREX=3030-2_260\nS80=3030-2_273\nS91=3030-2_273
 TDS.url=
+refreshInterval.vehicles=30
+refreshInterval.alerts=60
 
+tripUpdates.url=http://localhost:9000/tripUpdates
+vehiclePositions.url=http://localhost:9000/vehiclePositions
+alerts.url=http://localhost:9000/alerts

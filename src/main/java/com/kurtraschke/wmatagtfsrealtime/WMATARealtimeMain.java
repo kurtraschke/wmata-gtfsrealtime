@@ -16,21 +16,31 @@
  */
 package com.kurtraschke.wmatagtfsrealtime;
 
+import com.google.inject.ConfigurationException;
+import com.google.inject.CreationException;
 import com.google.inject.Guice;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.name.Named;
+import com.google.inject.name.Names;
 import java.io.File;
 import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
-import javax.inject.Inject;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.Parser;
 import org.nnsoft.guice.rocoto.Rocoto;
 import org.nnsoft.guice.rocoto.configuration.ConfigurationModule;
+import org.nnsoft.guice.rocoto.converters.FileConverter;
+import org.nnsoft.guice.rocoto.converters.PropertiesConverter;
+import org.nnsoft.guice.rocoto.converters.URLConverter;
 import org.onebusaway.cli.CommandLineInterfaceLibrary;
+import org.onebusaway.cli.Daemonizer;
 import org.onebusaway.gtfs_realtime.exporter.AlertsFileWriter;
 import org.onebusaway.gtfs_realtime.exporter.AlertsServlet;
 import org.onebusaway.gtfs_realtime.exporter.TripUpdatesFileWriter;
@@ -42,21 +52,27 @@ import org.slf4j.bridge.SLF4JBridgeHandler;
 
 public class WMATARealtimeMain {
 
-    private static final String ARG_TRIP_UPDATES_PATH = "tripUpdatesPath";
-    private static final String ARG_TRIP_UPDATES_URL = "tripUpdatesUrl";
-    private static final String ARG_VEHICLE_POSITIONS_PATH = "vehiclePositionsPath";
-    private static final String ARG_VEHICLE_POSITIONS_URL = "vehiclePositionsUrl";
-    private static final String ARG_ALERTS_PATH = "alertsPath";
-    private static final String ARG_ALERTS_URL = "alertsUrl";
     private static final String ARG_CONFIG_FILE = "config";
+    private static File _tripUpdatesPath;
+    private static URL _tripUpdatesUrl;
+    private static File _vehiclePositionsPath;
+    private static URL _vehiclePositionsUrl;
+    private static File _alertsPath;
+    private static URL _alertsUrl;
+    private Injector _injector;
+    private GTFSRealtimeProviderImpl _provider;
+    private LifecycleService _lifecycleService;
 
     public static void main(String[] args) throws Exception {
         System.setProperty("net.sf.ehcache.enableShutdownHook", "true");
         WMATARealtimeMain m = new WMATARealtimeMain();
-        m.run(args);
+        try {
+            m.run(args);
+        } catch (CreationException e) {
+            e.printStackTrace(System.err);
+            System.exit(-1);
+        }
     }
-    private GTFSRealtimeProviderImpl _provider;
-    private LifecycleService _lifecycleService;
 
     @Inject
     public void setProvider(GTFSRealtimeProviderImpl provider) {
@@ -74,7 +90,6 @@ public class WMATARealtimeMain {
         SLF4JBridgeHandler.removeHandlersForRootLogger();
         SLF4JBridgeHandler.install();
 
-
         if (args.length == 0 || CommandLineInterfaceLibrary.wantsHelp(args)) {
             printUsage();
             System.exit(-1);
@@ -82,13 +97,18 @@ public class WMATARealtimeMain {
 
         Options options = new Options();
         buildOptions(options);
+        Daemonizer.buildOptions(options);
         Parser parser = new GnuParser();
         final CommandLine cli = parser.parse(options, args);
+        Daemonizer.handleDaemonization(cli);
 
         Set<Module> modules = new HashSet<Module>();
         WMATARealtimeModule.addModuleAndDependencies(modules);
 
-        Injector injector = Guice.createInjector(
+        _injector = Guice.createInjector(
+                new URLConverter(),
+                new FileConverter(),
+                new PropertiesConverter(),
                 new ConfigurationModule() {
                     @Override
                     protected void bindConfigurations() {
@@ -102,65 +122,62 @@ public class WMATARealtimeMain {
                 },
                 Rocoto.expandVariables(modules));
 
-        injector.injectMembers(this);
+        _injector.injectMembers(this);
 
-        if (cli.hasOption(ARG_TRIP_UPDATES_URL)) {
-            URL url = new URL(cli.getOptionValue(ARG_TRIP_UPDATES_URL));
-            TripUpdatesServlet servlet = injector.getInstance(TripUpdatesServlet.class);
-            servlet.setUrl(url);
+        _tripUpdatesUrl = getConfigurationValue(URL.class, "tripUpdates.url");
+        if (_tripUpdatesUrl != null) {
+            TripUpdatesServlet servlet = _injector.getInstance(TripUpdatesServlet.class);
+            servlet.setUrl(_tripUpdatesUrl);
         }
 
-        if (cli.hasOption(ARG_TRIP_UPDATES_PATH)) {
-            File path = new File(cli.getOptionValue(ARG_TRIP_UPDATES_PATH));
-            TripUpdatesFileWriter writer = injector.getInstance(TripUpdatesFileWriter.class);
-            writer.setPath(path);
+        _tripUpdatesPath = getConfigurationValue(File.class, "tripUpdates.path");
+        if (_tripUpdatesPath != null) {
+            TripUpdatesFileWriter writer = _injector.getInstance(TripUpdatesFileWriter.class);
+            writer.setPath(_tripUpdatesPath);
         }
 
-        if (cli.hasOption(ARG_VEHICLE_POSITIONS_URL)) {
-            URL url = new URL(cli.getOptionValue(ARG_VEHICLE_POSITIONS_URL));
-            VehiclePositionsServlet servlet = injector.getInstance(VehiclePositionsServlet.class);
-            servlet.setUrl(url);
+        _vehiclePositionsUrl = getConfigurationValue(URL.class, "vehiclePositions.url");
+        if (_vehiclePositionsUrl != null) {
+            VehiclePositionsServlet servlet = _injector.getInstance(VehiclePositionsServlet.class);
+            servlet.setUrl(_vehiclePositionsUrl);
         }
 
-        if (cli.hasOption(ARG_VEHICLE_POSITIONS_PATH)) {
-            File path = new File(cli.getOptionValue(ARG_VEHICLE_POSITIONS_PATH));
-            VehiclePositionsFileWriter writer = injector.getInstance(VehiclePositionsFileWriter.class);
-            writer.setPath(path);
+        _vehiclePositionsPath = getConfigurationValue(File.class, "vehiclePositions.path");
+        if (_vehiclePositionsPath != null) {
+            VehiclePositionsFileWriter writer = _injector.getInstance(VehiclePositionsFileWriter.class);
+            writer.setPath(_vehiclePositionsPath);
         }
 
-        if (cli.hasOption(ARG_ALERTS_URL)) {
-            URL url = new URL(cli.getOptionValue(ARG_ALERTS_URL));
-            AlertsServlet servlet = injector.getInstance(AlertsServlet.class);
-            servlet.setUrl(url);
+        _alertsUrl = getConfigurationValue(URL.class, "alerts.url");
+        if (_alertsUrl != null) {
+            AlertsServlet servlet = _injector.getInstance(AlertsServlet.class);
+            servlet.setUrl(_alertsUrl);
         }
 
-        if (cli.hasOption(ARG_ALERTS_PATH)) {
-            File path = new File(cli.getOptionValue(ARG_ALERTS_PATH));
-            AlertsFileWriter writer = injector.getInstance(AlertsFileWriter.class);
-            writer.setPath(path);
+        _alertsPath = getConfigurationValue(File.class, "alerts.path");
+        if (_alertsPath != null) {
+            AlertsFileWriter writer = _injector.getInstance(AlertsFileWriter.class);
+            writer.setPath(_alertsPath);
         }
 
         _lifecycleService.start();
+    }
+
+    private <T> T getConfigurationValue(Class<T> type, String configurationKey) {
+        try {
+            return _injector.getInstance(Key.get(type, Names.named(configurationKey)));
+        } catch (ConfigurationException e) {
+            return null;
+        }
     }
 
     private void printUsage() {
         CommandLineInterfaceLibrary.printUsage(getClass());
     }
 
-    protected void buildOptions(Options options) {
-        /*
-         * FIXME: make the configuration file a required option;
-         * consider moving the rest into the configuration file.
-         */
-        options.addOption(ARG_TRIP_UPDATES_PATH, true, "trip updates path");
-        options.addOption(ARG_TRIP_UPDATES_URL, true, "trip updates url");
-        options.addOption(ARG_VEHICLE_POSITIONS_PATH, true,
-                "vehicle positions path");
-        options.addOption(ARG_VEHICLE_POSITIONS_URL, true, "vehicle positions url");
-        options.addOption(ARG_ALERTS_PATH, true,
-                "alerts path");
-        options.addOption(ARG_ALERTS_URL, true, "alerts url");
-        options.addOption(ARG_CONFIG_FILE, true, "configuration file path");
-
+    private void buildOptions(Options options) {
+        Option configFile = new Option(ARG_CONFIG_FILE, true, "configuration file path");
+        configFile.setRequired(true);
+        options.addOption(configFile);
     }
 }
