@@ -80,7 +80,7 @@ public class GTFSRealtimeProviderImpl {
     private WMATATripMapperService _tripMapperService;
     private TransitDataServiceService _tds;
     private CacheManager _cacheManager;
-    private Cache _lastStopForTripCache;
+    private Cache _firstStopForTripCache;
     private Cache _alertIDCache;
     /**
      * How often vehicle data will be downloaded, in seconds.
@@ -121,8 +121,8 @@ public class GTFSRealtimeProviderImpl {
     }
 
     @Inject
-    public void setLastStopForTripCache(@Named("caches.lastStopForTrip") Cache lastStopForTripCache) {
-        _lastStopForTripCache = lastStopForTripCache;
+    public void setFirstStopForTripCache(@Named("caches.firstStopForTrip") Cache firstStopForTripCache) {
+        _firstStopForTripCache = firstStopForTripCache;
     }
 
     @Inject
@@ -270,7 +270,7 @@ public class GTFSRealtimeProviderImpl {
         StopTimeUpdate.Builder stopTimeUpdate = StopTimeUpdate.newBuilder();
         stopTimeUpdate.setArrival(arrival);
         if (gtfsTripID != null) {
-            stopTimeUpdate.setStopId(stripID(getLastStopForTrip(gtfsTripID)));
+            stopTimeUpdate.setStopId(stripID(getFirstStopIdForTripId(gtfsTripID)));
         }
 
         TripUpdate.Builder tripUpdate = TripUpdate.newBuilder();
@@ -312,8 +312,8 @@ public class GTFSRealtimeProviderImpl {
         return pvr;
     }
 
-    private String getLastStopForTrip(String tripID) {
-        Element e = _lastStopForTripCache.get(tripID);
+    private String getFirstStopIdForTripId(String tripID) {
+        Element e = _firstStopForTripCache.get(tripID);
 
         if (e == null) {
 
@@ -322,11 +322,11 @@ public class GTFSRealtimeProviderImpl {
             tdqb.setInclusion(new TripDetailsInclusionBean(true, true, false));
             ListBean<TripDetailsBean> b = _tds.getService().getTripDetails(tdqb);
 
-            String lastStopID = Iterables.getLast(Iterables.getOnlyElement(b.getList()).getSchedule().getStopTimes()).getStop().getId();
+            String firstStopId = Iterables.getOnlyElement(b.getList()).getSchedule().getStopTimes().get(0).getStop().getId();
 
-            _lastStopForTripCache.put(new Element(tripID, lastStopID));
+            _firstStopForTripCache.put(new Element(tripID, firstStopId));
 
-            return lastStopID;
+            return firstStopId;
         } else {
             return (String) e.getObjectValue();
         }
