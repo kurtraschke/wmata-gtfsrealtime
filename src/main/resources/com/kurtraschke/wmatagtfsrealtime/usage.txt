@@ -1,0 +1,15 @@
+Description:
+  Command-line application that produces a GTFS-realtime feed from the WMATA API.
+  
+Usage:
+  [-args] --config=file
+
+Basic Args:
+  --config=file                    configuration file
+
+Advanced Args:
+  --daemonize                      Indicates that the process should be daemonized
+  --pidFile=path                   When daemonized, writes the process pid to the specified file
+  --jvmArgs                        When daemonized, args to specify to the daemonized JVM instance.
+  --errorFile=path|&1              When daemonized, stderr is written to the specified file or redirected to stdout (&1)
+  --outputFile=path|&2             When daemonized, stdout is written to the specified file or redirected to stderr (&2)
