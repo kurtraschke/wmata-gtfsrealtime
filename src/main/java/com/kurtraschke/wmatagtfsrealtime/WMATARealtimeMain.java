@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Google, Inc.
- * Copyright (C) 2012 Kurt Raschke
+ * Copyright (C) 2013 Kurt Raschke
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -23,7 +23,6 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import java.io.File;
 import java.net.URL;
@@ -41,12 +40,12 @@ import org.nnsoft.guice.rocoto.converters.PropertiesConverter;
 import org.nnsoft.guice.rocoto.converters.URLConverter;
 import org.onebusaway.cli.CommandLineInterfaceLibrary;
 import org.onebusaway.cli.Daemonizer;
-import org.onebusaway.gtfs_realtime.exporter.AlertsFileWriter;
-import org.onebusaway.gtfs_realtime.exporter.AlertsServlet;
-import org.onebusaway.gtfs_realtime.exporter.TripUpdatesFileWriter;
-import org.onebusaway.gtfs_realtime.exporter.TripUpdatesServlet;
-import org.onebusaway.gtfs_realtime.exporter.VehiclePositionsFileWriter;
-import org.onebusaway.gtfs_realtime.exporter.VehiclePositionsServlet;
+import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeExporter;
+import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeFileWriter;
+import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeGuiceBindingTypes.Alerts;
+import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeGuiceBindingTypes.TripUpdates;
+import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeGuiceBindingTypes.VehiclePositions;
+import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeServlet;
 import org.onebusaway.guice.jsr250.LifecycleService;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
@@ -73,6 +72,9 @@ public class WMATARealtimeMain {
             System.exit(-1);
         }
     }
+    private GtfsRealtimeExporter _vehiclePositionsExporter;
+    private GtfsRealtimeExporter _tripUpdatesExporter;
+    private GtfsRealtimeExporter _alertsExporter;
 
     @Inject
     public void setProvider(GTFSRealtimeProviderImpl provider) {
@@ -82,6 +84,21 @@ public class WMATARealtimeMain {
     @Inject
     public void setLifecycleService(LifecycleService lifecycleService) {
         _lifecycleService = lifecycleService;
+    }
+
+    @Inject
+    public void setVehiclePositionsExporter(@VehiclePositions GtfsRealtimeExporter exporter) {
+        _vehiclePositionsExporter = exporter;
+    }
+
+    @Inject
+    public void setTripUpdatesExporter(@TripUpdates GtfsRealtimeExporter exporter) {
+        _tripUpdatesExporter = exporter;
+    }
+
+    @Inject
+    public void setAlertsExporter(@Alerts GtfsRealtimeExporter exporter) {
+        _alertsExporter = exporter;
     }
 
     public void run(String[] args) throws Exception {
@@ -126,38 +143,45 @@ public class WMATARealtimeMain {
 
         _tripUpdatesUrl = getConfigurationValue(URL.class, "tripUpdates.url");
         if (_tripUpdatesUrl != null) {
-            TripUpdatesServlet servlet = _injector.getInstance(TripUpdatesServlet.class);
+            GtfsRealtimeServlet servlet = _injector.getInstance(GtfsRealtimeServlet.class);
             servlet.setUrl(_tripUpdatesUrl);
+            servlet.setSource(_tripUpdatesExporter);
+
         }
 
         _tripUpdatesPath = getConfigurationValue(File.class, "tripUpdates.path");
         if (_tripUpdatesPath != null) {
-            TripUpdatesFileWriter writer = _injector.getInstance(TripUpdatesFileWriter.class);
+            GtfsRealtimeFileWriter writer = _injector.getInstance(GtfsRealtimeFileWriter.class);
             writer.setPath(_tripUpdatesPath);
+            writer.setSource(_tripUpdatesExporter);
         }
 
         _vehiclePositionsUrl = getConfigurationValue(URL.class, "vehiclePositions.url");
         if (_vehiclePositionsUrl != null) {
-            VehiclePositionsServlet servlet = _injector.getInstance(VehiclePositionsServlet.class);
+            GtfsRealtimeServlet servlet = _injector.getInstance(GtfsRealtimeServlet.class);
             servlet.setUrl(_vehiclePositionsUrl);
+            servlet.setSource(_vehiclePositionsExporter);
         }
 
         _vehiclePositionsPath = getConfigurationValue(File.class, "vehiclePositions.path");
         if (_vehiclePositionsPath != null) {
-            VehiclePositionsFileWriter writer = _injector.getInstance(VehiclePositionsFileWriter.class);
+            GtfsRealtimeFileWriter writer = _injector.getInstance(GtfsRealtimeFileWriter.class);
             writer.setPath(_vehiclePositionsPath);
+            writer.setSource(_vehiclePositionsExporter);
         }
 
         _alertsUrl = getConfigurationValue(URL.class, "alerts.url");
         if (_alertsUrl != null) {
-            AlertsServlet servlet = _injector.getInstance(AlertsServlet.class);
+            GtfsRealtimeServlet servlet = _injector.getInstance(GtfsRealtimeServlet.class);
             servlet.setUrl(_alertsUrl);
+            servlet.setSource(_alertsExporter);
         }
 
         _alertsPath = getConfigurationValue(File.class, "alerts.path");
         if (_alertsPath != null) {
-            AlertsFileWriter writer = _injector.getInstance(AlertsFileWriter.class);
+            GtfsRealtimeFileWriter writer = _injector.getInstance(GtfsRealtimeFileWriter.class);
             writer.setPath(_alertsPath);
+            writer.setSource(_alertsExporter);
         }
 
         _lifecycleService.start();

@@ -16,10 +16,6 @@
     <!-- Cache mappings of WMATA trips to GTFS for 1 hour. -->
     <cache name="wmatatrip" overflowToDisk="false" diskPersistent="true" timeToIdleSeconds="3600" maxEntriesLocalHeap="5000" />
     
-    <!-- Cache WMATA stops by ID and first stop for trips in RAM only. -->
-    <cache name="wmatastopbyid" overflowToDisk="false" diskPersistent="false" timeToIdleSeconds="3600" maxEntriesLocalHeap="5000" />    
-    <cache name="wmatafirststopfortrip" overflowToDisk="false" diskPersistent="false" timeToIdleSeconds="3600" maxEntriesLocalHeap="5000" />
-    
     <!-- Cache IDs of alerts so we can mark them as deleted once removed. -->
     <cache name="wmataalertid" overflowToDisk="false" diskPersistent="true" timeToLiveSeconds="172800" maxEntriesLocalHeap="500" />
     

@@ -47,8 +47,6 @@ public class WMATARealtimeModule extends AbstractModule {
         bind(Cache.class).annotatedWith(Names.named("caches.busRoute")).toInstance(CacheManager.getInstance().getCache("wmatabusroute"));
         bind(Cache.class).annotatedWith(Names.named("caches.railRoute")).toInstance(CacheManager.getInstance().getCache("wmatarailroute"));
         bind(Cache.class).annotatedWith(Names.named("caches.trip")).toInstance(CacheManager.getInstance().getCache("wmatatrip"));
-        bind(Cache.class).annotatedWith(Names.named("caches.stopByID")).toInstance(CacheManager.getInstance().getCache("wmatastopbyid"));
-        bind(Cache.class).annotatedWith(Names.named("caches.firstStopForTrip")).toInstance(CacheManager.getInstance().getCache("wmatafirststopfortrip"));
         bind(Cache.class).annotatedWith(Names.named("caches.alertID")).toInstance(CacheManager.getInstance().getCache("wmataalertid"));
     }
 

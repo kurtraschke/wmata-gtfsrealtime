@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Kurt Raschke
+ * Copyright (C) 2013 Kurt Raschke
  *
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -24,10 +24,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
@@ -54,6 +54,9 @@ public class WMATARouteMapperService {
     @Inject
     @Named("WMATA.agencyID")
     private String AGENCY_ID;
+    @Inject
+    @Named("WMATA.staticMappings")
+    private Properties staticMappingProperties;
 
     @Inject
     public void setTransitDataServiceService(TransitDataServiceService tds) {
@@ -76,10 +79,26 @@ public class WMATARouteMapperService {
         matchBadRoutes = Predicates.in(Arrays.asList(badRoutes));
     }
 
-    @Inject
-    public void setStaticMappings(@Named("WMATA.staticMappings") Properties staticMappingProperties) {
-        for (String key : staticMappingProperties.stringPropertyNames()) {
-            staticMappings.put(key, staticMappingProperties.getProperty(key));
+    @PostConstruct
+    public void fixStaticMappings() {
+        List<RouteBean> gtfsRoutes = _tds.getService().getRoutesForAgencyId(AGENCY_ID).getList();
+
+        for (final String key : staticMappingProperties.stringPropertyNames()) {
+
+            Optional<RouteBean> matchedRoute = Iterables.tryFind(gtfsRoutes, new Predicate<RouteBean>() {
+                public boolean apply(RouteBean gr) {
+                    if (gr.getShortName() != null) {
+                        return gr.getShortName().equals(staticMappingProperties.getProperty(key));
+                    } else {
+                        return false;
+                    }
+                }
+            });
+
+            if (matchedRoute.isPresent()) {
+                String mappedRouteID = matchedRoute.get().getId();
+                staticMappings.put(key, mappedRouteID);
+            }
         }
     }
 

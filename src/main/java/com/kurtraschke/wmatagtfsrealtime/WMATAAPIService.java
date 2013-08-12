@@ -228,7 +228,7 @@ public class WMATAAPIService {
             SAXException {
 
         Element e = _cache.get(url);
-        
+
         if (cache && e != null) {
             return e.getObjectValue();
         }
