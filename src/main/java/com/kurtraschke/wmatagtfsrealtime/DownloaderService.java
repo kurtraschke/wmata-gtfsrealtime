@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 OneBusAway.
- * Copyright (C) 2012 Kurt Raschke
+ * Copyright (C) 2013 Kurt Raschke
  * 
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,13 +33,12 @@ import org.apache.http.impl.client.DefaultHttpClient;
  * All calls to the WMATA API go through this class, which ensures that the API
  * rate limit is respected.
  *
- * @author bdferris
  */
 @Singleton
 public class DownloaderService {
 
     private HttpClient _client = new DecompressingHttpClient(new DefaultHttpClient());
-    private RateLimiter _limiter = RateLimiter.create(5.0);
+    private RateLimiter _limiter = RateLimiter.create(2.5);
 
     public synchronized InputStream openUrl(String uri) throws IOException {
         _limiter.acquire();

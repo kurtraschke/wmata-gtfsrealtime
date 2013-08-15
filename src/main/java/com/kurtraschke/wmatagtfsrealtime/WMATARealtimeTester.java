@@ -34,9 +34,10 @@ import org.apache.commons.cli.Parser;
 import org.nnsoft.guice.rocoto.Rocoto;
 import org.nnsoft.guice.rocoto.configuration.ConfigurationModule;
 import org.onebusaway.cli.CommandLineInterfaceLibrary;
+import org.onebusaway.gtfs.model.AgencyAndId;
+import org.onebusaway.gtfs.model.calendar.ServiceDate;
 import org.onebusaway.guice.jsr250.LifecycleService;
 import org.slf4j.LoggerFactory;
-import org.slf4j.bridge.SLF4JBridgeHandler;
 
 public class WMATARealtimeTester {
 
@@ -69,12 +70,6 @@ public class WMATARealtimeTester {
     }
 
     public void run(String[] args) throws Exception {
-        //The Hessian client uses java.util.logging, so we bridge it to
-        //slf4j, so all logging is funneled into logback.
-        SLF4JBridgeHandler.removeHandlersForRootLogger();
-        SLF4JBridgeHandler.install();
-
-
         //Force on debug logging (otherwise disabled in logback.xml)
         Logger root = (Logger) LoggerFactory.getLogger(WMATATripMapperService.class);
         root.setLevel(Level.ALL);
@@ -110,7 +105,7 @@ public class WMATARealtimeTester {
 
 
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        String mappedTripID = _service.getTripMapping(dateFormat.parse(cli.getOptionValue(ARG_SERVICE_DATE)),
+        AgencyAndId mappedTripID = _service.getTripMapping(new ServiceDate(dateFormat.parse(cli.getOptionValue(ARG_SERVICE_DATE))),
                 cli.getOptionValue(ARG_TRIP_ID), cli.getOptionValue(ARG_ROUTE_ID));
         System.out.println(mappedTripID);
         _cacheManager.shutdown();

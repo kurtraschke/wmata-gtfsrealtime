@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Google, Inc.
- * Copyright (C) 2012 Kurt Raschke
+ * Copyright (C) 2013 Kurt Raschke
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -35,17 +35,9 @@ public class WMATARealtimeModule extends AbstractModule {
 
     @Override
     protected void configure() {
-        bind(GTFSRealtimeProviderImpl.class);
-        bind(DownloaderService.class);
-        bind(WMATAAPIService.class);
-        bind(WMATARouteMapperService.class);
-        bind(TransitDataServiceService.class);
-
         bind(CacheManager.class).toInstance(CacheManager.getInstance());
 
         bind(Cache.class).annotatedWith(Names.named("caches.api")).toInstance(CacheManager.getInstance().getCache("wmataapi"));
-        bind(Cache.class).annotatedWith(Names.named("caches.busRoute")).toInstance(CacheManager.getInstance().getCache("wmatabusroute"));
-        bind(Cache.class).annotatedWith(Names.named("caches.railRoute")).toInstance(CacheManager.getInstance().getCache("wmatarailroute"));
         bind(Cache.class).annotatedWith(Names.named("caches.trip")).toInstance(CacheManager.getInstance().getCache("wmatatrip"));
         bind(Cache.class).annotatedWith(Names.named("caches.alertID")).toInstance(CacheManager.getInstance().getCache("wmataalertid"));
     }

@@ -5,7 +5,6 @@
     <logger name="net.sf.ehcache" level="WARN" />
     <logger name="org.mortbay.log" level="WARN" />
     <logger name="org.eclipse.jetty" level="WARN" />
-    <logger name="com.caucho.hessian.io.SerializerFactory" level="ERROR" />
     <logger name="com.kurtraschke.wmatagtfsrealtime" level="INFO" />
 
      <root level="ALL">

@@ -17,7 +17,6 @@
 package com.kurtraschke.wmatagtfsrealtime;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.transit.realtime.GtfsRealtime.Alert;
 import com.google.transit.realtime.GtfsRealtime.EntitySelector;
@@ -32,9 +31,7 @@ import com.google.transit.realtime.GtfsRealtime.VehiclePosition;
 import com.kurtraschke.wmatagtfsrealtime.api.WMATAAlert;
 import com.kurtraschke.wmatagtfsrealtime.api.WMATABusPosition;
 import java.io.IOException;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -49,16 +46,14 @@ import javax.inject.Singleton;
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.Element;
-import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeFullUpdate;
+import org.onebusaway.gtfs.model.AgencyAndId;
+import org.onebusaway.gtfs.model.calendar.ServiceDate;
 import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeGuiceBindingTypes.Alerts;
 import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeGuiceBindingTypes.TripUpdates;
 import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeGuiceBindingTypes.VehiclePositions;
+import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeIncrementalUpdate;
 import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeLibrary;
 import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeSink;
-import org.onebusaway.transit_data.model.ListBean;
-import org.onebusaway.transit_data.model.trips.TripDetailsBean;
-import org.onebusaway.transit_data.model.trips.TripDetailsInclusionBean;
-import org.onebusaway.transit_data.model.trips.TripDetailsQueryBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
@@ -69,8 +64,6 @@ import org.xml.sax.SAXException;
  * resulting vehicle data into the GTFS-realtime format.
  *
  *
- * @author bdferris
- *
  */
 @Singleton
 public class GTFSRealtimeProviderImpl {
@@ -80,7 +73,6 @@ public class GTFSRealtimeProviderImpl {
     private WMATAAPIService _api;
     private WMATARouteMapperService _routeMapperService;
     private WMATATripMapperService _tripMapperService;
-    private TransitDataServiceService _tds;
     private CacheManager _cacheManager;
     private Cache _alertIDCache;
     /**
@@ -127,11 +119,6 @@ public class GTFSRealtimeProviderImpl {
     }
 
     @Inject
-    public void setTransitDataServiceService(TransitDataServiceService tds) {
-        _tds = tds;
-    }
-
-    @Inject
     public void setCacheManager(CacheManager cacheManager) {
         _cacheManager = cacheManager;
     }
@@ -175,26 +162,36 @@ public class GTFSRealtimeProviderImpl {
      * turn, and create a GTFS-realtime feed of trip updates and vehicle
      * positions as a result.
      */
-    private void refreshVehicles() throws IOException, SAXException {
+    private void refreshVehicles() throws IOException, SAXException, InterruptedException {
 
 
         /**
          * We download the vehicle details as an array of objects.
          */
         List<WMATABusPosition> busPositions = _api.downloadBusPositions();
-
-        GtfsRealtimeFullUpdate tripUpdatesUpdate = new GtfsRealtimeFullUpdate();
-        GtfsRealtimeFullUpdate vehiclePositionsUpdate = new GtfsRealtimeFullUpdate();
-
         /**
          * We iterate over every vehicle object.
          */
+        Set<ServiceDate> serviceDates = new HashSet<ServiceDate>();
+
+        for (WMATABusPosition bp : busPositions) {
+            serviceDates.add(bp.getServiceDate());
+        }
+
+        _tripMapperService.setupForServiceDates(serviceDates);
+
         for (WMATABusPosition bp : busPositions) {
             try {
                 ProcessedVehicleResponse pvr = processVehicle(bp);
 
-                tripUpdatesUpdate.addEntity(pvr.tripUpdateEntity.build());
-                vehiclePositionsUpdate.addEntity(pvr.vehiclePositionEntity.build());
+                GtfsRealtimeIncrementalUpdate tripUpdateUpdate = new GtfsRealtimeIncrementalUpdate();
+                tripUpdateUpdate.addUpdatedEntity(pvr.tripUpdateEntity.build());
+                _tripUpdatesSink.handleIncrementalUpdate(tripUpdateUpdate);
+
+                GtfsRealtimeIncrementalUpdate vehiclePositionUpdate = new GtfsRealtimeIncrementalUpdate();
+                vehiclePositionUpdate.addUpdatedEntity(pvr.vehiclePositionEntity.build());
+                _vehiclePositionsSink.handleIncrementalUpdate(vehiclePositionUpdate);
+
             } catch (Exception e) {
                 _log.warn("Error constructing update for vehicle " + bp.getVehicleID() + " on route " + bp.getRouteID() + " to " + bp.getTripHeadsign(), e);
             }
@@ -204,10 +201,7 @@ public class GTFSRealtimeProviderImpl {
          * Build out the final GTFS-realtime feed messages and save them.
          */
 
-        _tripUpdatesSink.handleFullUpdate(tripUpdatesUpdate);
-        _vehiclePositionsSink.handleFullUpdate(vehiclePositionsUpdate);
-
-        _log.info("vehicles extracted: " + vehiclePositionsUpdate.getEntities().size());
+        _log.info("vehicles extracted: " + busPositions.size());
     }
 
     private ProcessedVehicleResponse processVehicle(WMATABusPosition bp) throws IOException, SAXException {
@@ -222,20 +216,13 @@ public class GTFSRealtimeProviderImpl {
         float lon = bp.getLon();
         float deviation = bp.getDeviation();
 
-        String gtfsRouteID;
-        String gtfsTripID = null;
+        AgencyAndId gtfsRouteID;
+        AgencyAndId gtfsTripID = null;
 
-        gtfsRouteID = _routeMapperService.getBusRouteMapping(route);
+        gtfsRouteID = _routeMapperService.getRouteMapping(route);
 
         if (gtfsRouteID != null) {
-            GregorianCalendar serviceDate = new GregorianCalendar();
-            serviceDate.setTime(bp.getTripStartTime());
-            serviceDate.set(Calendar.HOUR_OF_DAY, 0);
-            serviceDate.set(Calendar.MINUTE, 0);
-            serviceDate.set(Calendar.SECOND, 0);
-            serviceDate.set(Calendar.MILLISECOND, 0);
-
-            gtfsTripID = _tripMapperService.getTripMapping(serviceDate.getTime(), trip, route);
+            gtfsTripID = _tripMapperService.getTripMapping(bp.getServiceDate(), trip, route);
         }
         /**
          * We construct a TripDescriptor and VehicleDescriptor, which will be
@@ -244,10 +231,10 @@ public class GTFSRealtimeProviderImpl {
          */
         TripDescriptor.Builder tripDescriptor = TripDescriptor.newBuilder();
         if (gtfsRouteID != null) {
-            tripDescriptor.setRouteId(stripID(gtfsRouteID));
+            tripDescriptor.setRouteId(gtfsRouteID.getId());
         }
         if (gtfsTripID != null) {
-            tripDescriptor.setTripId(stripID(gtfsTripID));
+            tripDescriptor.setTripId(gtfsTripID.getId());
         }
 
         VehicleDescriptor.Builder vehicleDescriptor = VehicleDescriptor.newBuilder();
@@ -255,7 +242,7 @@ public class GTFSRealtimeProviderImpl {
 
         /**
          * To construct our TripUpdate, we create a stop-time arrival event for
-         * the first stop for the vehicle, with the specified arrival delay. We
+         * the next stop for the vehicle, with the specified arrival delay. We
          * add the stop-time update to a TripUpdate builder, along with the trip
          * and vehicle descriptors.
          */
@@ -264,9 +251,7 @@ public class GTFSRealtimeProviderImpl {
 
         StopTimeUpdate.Builder stopTimeUpdate = StopTimeUpdate.newBuilder();
         stopTimeUpdate.setArrival(arrival);
-        if (gtfsTripID != null) {
-            stopTimeUpdate.setStopId(stripID(getStopIdForTripId(gtfsTripID)));
-        }
+        stopTimeUpdate.setStopSequence(1); //FIXME
 
         TripUpdate.Builder tripUpdate = TripUpdate.newBuilder();
         tripUpdate.addStopTimeUpdate(stopTimeUpdate);
@@ -307,33 +292,12 @@ public class GTFSRealtimeProviderImpl {
         return pvr;
     }
 
-    private String getStopIdForTripId(String tripID) {
-        TripDetailsQueryBean tdqb = new TripDetailsQueryBean();
-        tdqb.setTripId(tripID);
-        tdqb.setInclusion(new TripDetailsInclusionBean(true, true, true));
-        ListBean<TripDetailsBean> b = _tds.getService().getTripDetails(tdqb);
-
-        TripDetailsBean tdb = Iterables.getOnlyElement(b.getList());
-        
-        if (tdb.getStatus() != null && tdb.getStatus().getNextStop() != null) {
-            return tdb.getStatus().getNextStop().getId();
-        } else {
-            return tdb.getSchedule().getStopTimes().get(1).getStop().getId();
-        }
-        
-    }
-
-    private String stripID(String id) {
-        return id.split("_", 2)[1];
-    }
-
     @SuppressWarnings("unchecked")
     private void refreshAlerts() throws IOException, SAXException {
-
         List<WMATAAlert> busAlerts = _api.downloadBusAlerts();
         List<WMATAAlert> railAlerts = _api.downloadRailAlerts();
 
-        GtfsRealtimeFullUpdate alertsUpdate = new GtfsRealtimeFullUpdate();
+        Set<String> currentAlertIDs = new HashSet<String>();
 
         for (WMATAAlert busAlert : busAlerts) {
             Alert.Builder alert = Alert.newBuilder();
@@ -344,9 +308,9 @@ public class GTFSRealtimeProviderImpl {
 
             for (String route : routes) {
                 EntitySelector.Builder entity = EntitySelector.newBuilder();
-                String gtfsRoute = _routeMapperService.getBusRouteMapping(route);
+                AgencyAndId gtfsRoute = _routeMapperService.getRouteMapping(route);
                 if (gtfsRoute != null) {
-                    entity.setRouteId(stripID(gtfsRoute));
+                    entity.setRouteId(gtfsRoute.getId());
                     alert.addInformedEntity(entity);
                 }
             }
@@ -355,7 +319,11 @@ public class GTFSRealtimeProviderImpl {
                 FeedEntity.Builder alertEntity = FeedEntity.newBuilder();
                 alertEntity.setId(busAlert.getGuid().toString());
                 alertEntity.setAlert(alert);
-                alertsUpdate.addEntity(alertEntity.build());
+
+                GtfsRealtimeIncrementalUpdate alertUpdate = new GtfsRealtimeIncrementalUpdate();
+                alertUpdate.addUpdatedEntity(alertEntity.build());
+                _alertsSink.handleIncrementalUpdate(alertUpdate);
+                currentAlertIDs.add(busAlert.getGuid().toString());
                 _alertIDCache.put(new Element(busAlert.getGuid().toString(), null));
             }
         }
@@ -369,11 +337,11 @@ public class GTFSRealtimeProviderImpl {
 
             for (String route : routes) {
 
-                String mappedRoute = _routeMapperService.getRailRouteMapping(route);
+                AgencyAndId mappedRoute = _routeMapperService.getRouteMapping(route);
 
                 if (mappedRoute != null) {
                     EntitySelector.Builder entity = EntitySelector.newBuilder();
-                    entity.setRouteId(stripID(mappedRoute));
+                    entity.setRouteId(mappedRoute.getId());
                     alert.addInformedEntity(entity);
                 }
             }
@@ -382,16 +350,13 @@ public class GTFSRealtimeProviderImpl {
                 FeedEntity.Builder alertEntity = FeedEntity.newBuilder();
                 alertEntity.setId(railAlert.getGuid().toString());
                 alertEntity.setAlert(alert);
-                alertsUpdate.addEntity(alertEntity.build());
+                GtfsRealtimeIncrementalUpdate alertUpdate = new GtfsRealtimeIncrementalUpdate();
+                alertUpdate.addUpdatedEntity(alertEntity.build());
+                _alertsSink.handleIncrementalUpdate(alertUpdate);
+                currentAlertIDs.add(railAlert.getGuid().toString());
                 _alertIDCache.put(new Element(railAlert.getGuid().toString(), null));
             }
 
-        }
-
-        Set<String> currentAlertIDs = new HashSet<String>();
-
-        for (FeedEntity e : alertsUpdate.getEntities()) {
-            currentAlertIDs.add(e.getId());
         }
 
         ImmutableSet<String> allAlertIDs = ImmutableSet.copyOf(_alertIDCache.getKeysWithExpiryCheck());
@@ -402,15 +367,12 @@ public class GTFSRealtimeProviderImpl {
          * clients will remove it from their UI.
          */
         for (String removedAlert : Sets.difference(allAlertIDs, currentAlertIDs)) {
-            FeedEntity.Builder alertEntity = FeedEntity.newBuilder();
-            alertEntity.setId(removedAlert);
-            alertEntity.setIsDeleted(true);
-            alertsUpdate.addEntity(alertEntity.build());
+            GtfsRealtimeIncrementalUpdate alertUpdate = new GtfsRealtimeIncrementalUpdate();
+            alertUpdate.addDeletedEntity(removedAlert);
+            _alertsSink.handleIncrementalUpdate(alertUpdate);
         }
 
-        _alertsSink.handleFullUpdate(alertsUpdate);
-
-        _log.info("alerts extracted: " + alertsUpdate.getEntities().size());
+        _log.info("alerts extracted: " + (railAlerts.size() + busAlerts.size()));
     }
 
     /**

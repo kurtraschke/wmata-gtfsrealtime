@@ -21,6 +21,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
+import org.onebusaway.gtfs.model.calendar.ServiceDate;
 
 /**
  *
@@ -30,18 +31,18 @@ public class WMATABusPosition implements Serializable {
 
     private static final long serialVersionUID = 1L;
     private final SimpleDateFormat parseFormat;
-    public Date dateTime;
-    public float deviation;
-    public int directionNum;
-    public String directionText;
-    public float lat;
-    public float lon;
-    public String routeID;
-    public String tripHeadsign;
-    public String tripID;
-    public Date tripStartTime;
-    public Date tripEndTime;
-    public String vehicleID;
+    private Date dateTime;
+    private float deviation;
+    private int directionNum;
+    private String directionText;
+    private float lat;
+    private float lon;
+    private String routeID;
+    private String tripHeadsign;
+    private String tripID;
+    private Date tripStartTime;
+    private Date tripEndTime;
+    private String vehicleID;
 
     public Date getDateTime() {
         return dateTime;
@@ -155,6 +156,10 @@ public class WMATABusPosition implements Serializable {
 
     public void setVehicleID(String vehicleID) {
         this.vehicleID = vehicleID;
+    }
+    
+    public ServiceDate getServiceDate() {
+        return new ServiceDate(this.getTripStartTime());
     }
 
     public WMATABusPosition() {

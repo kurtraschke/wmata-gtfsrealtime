@@ -1,7 +1,6 @@
 /*
  * Copyright (C) 2013 Kurt Raschke
  *
- *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
  * the License at
@@ -19,7 +18,10 @@ package com.kurtraschke.wmatagtfsrealtime;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.kurtraschke.wmatagtfsrealtime.api.WMATARoute;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -31,10 +33,11 @@ import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
-import net.sf.ehcache.Cache;
-import net.sf.ehcache.Element;
-import org.onebusaway.transit_data.model.RouteBean;
+import org.onebusaway.gtfs.model.AgencyAndId;
+import org.onebusaway.gtfs.model.Route;
+import org.onebusaway.gtfs.services.GtfsRelationalDao;
 import org.slf4j.LoggerFactory;
+import org.xml.sax.SAXException;
 
 /**
  *
@@ -44,12 +47,12 @@ import org.slf4j.LoggerFactory;
 public class WMATARouteMapperService {
 
     private static final org.slf4j.Logger _log = LoggerFactory.getLogger(WMATARouteMapperService.class);
-    private TransitDataServiceService _tds;
-    private Cache _busRouteCache;
-    private Cache _railRouteCache;
+    private WMATAAPIService _api;
+    private GtfsRelationalDao _dao;
     private String[] badRoutes;
     private final Pattern routeExtract = Pattern.compile("^([A-Z0-9]+)(c?v?S?[0-9]?).*$");
-    private Map<String, String> staticMappings = new HashMap<String, String>();
+    private Map<String, AgencyAndId> staticMappings = new HashMap<String, AgencyAndId>();
+    private Map<String, AgencyAndId> routeMappings = new HashMap<String, AgencyAndId>();
     private Predicate<String> matchBadRoutes;
     @Inject
     @Named("WMATA.agencyID")
@@ -57,20 +60,16 @@ public class WMATARouteMapperService {
     @Inject
     @Named("WMATA.staticMappings")
     private Properties staticMappingProperties;
+    private List<Route> gtfsRoutes;
 
     @Inject
-    public void setTransitDataServiceService(TransitDataServiceService tds) {
-        _tds = tds;
+    public void setGtfsRelationalDao(GtfsDaoService dao) {
+        _dao = dao.getDao();
     }
 
     @Inject
-    public void setBusRouteCache(@Named("caches.busRoute") Cache cache) {
-        _busRouteCache = cache;
-    }
-
-    @Inject
-    public void setRailRouteCache(@Named("caches.railRoute") Cache cache) {
-        _railRouteCache = cache;
+    public void setWMATAAPIService(WMATAAPIService api) {
+        _api = api;
     }
 
     @Inject
@@ -80,13 +79,36 @@ public class WMATARouteMapperService {
     }
 
     @PostConstruct
+    public void start() throws IOException, SAXException {
+        gtfsRoutes = _dao.getRoutesForAgency(_dao.getAgencyForId(AGENCY_ID));
+        fixStaticMappings();
+        primeCaches();
+    }
+
+    public void primeCaches() throws IOException, SAXException {
+        for (WMATARoute r : _api.downloadRouteList()) {
+            AgencyAndId mapResult = mapBusRoute(r.getRouteID());
+
+            if (mapResult != null) {
+                routeMappings.put(r.getRouteID(), mapResult);
+            }
+        }
+
+        String[] railRoutes = new String[]{"RED", "ORANGE", "YELLOW", "GREEN", "BLUE"};
+
+        for (String r : railRoutes) {
+            AgencyAndId mapResult = mapRailRoute(r);
+
+            if (mapResult != null) {
+                routeMappings.put(r, mapResult);
+            }
+        }
+    }
+
     public void fixStaticMappings() {
-        List<RouteBean> gtfsRoutes = _tds.getService().getRoutesForAgencyId(AGENCY_ID).getList();
-
         for (final String key : staticMappingProperties.stringPropertyNames()) {
-
-            Optional<RouteBean> matchedRoute = Iterables.tryFind(gtfsRoutes, new Predicate<RouteBean>() {
-                public boolean apply(RouteBean gr) {
+            Optional<Route> matchedRoute = Iterables.tryFind(gtfsRoutes, new Predicate<Route>() {
+                public boolean apply(Route gr) {
                     if (gr.getShortName() != null) {
                         return gr.getShortName().equals(staticMappingProperties.getProperty(key));
                     } else {
@@ -96,15 +118,15 @@ public class WMATARouteMapperService {
             });
 
             if (matchedRoute.isPresent()) {
-                String mappedRouteID = matchedRoute.get().getId();
+                AgencyAndId mappedRouteID = matchedRoute.get().getId();
                 staticMappings.put(key, mappedRouteID);
             }
         }
     }
 
-    private String mapBusRoute(String routeID) {
+    private AgencyAndId mapBusRoute(String routeID) {
         if (staticMappings.containsKey(routeID)) {
-            String mappedRouteID = staticMappings.get(routeID);
+            AgencyAndId mappedRouteID = staticMappings.get(routeID);
             _log.info("Mapped WMATA route " + routeID + " to GTFS route " + mappedRouteID + " (using override)");
             return mappedRouteID;
         }
@@ -114,11 +136,8 @@ public class WMATARouteMapperService {
         if (m.matches()) {
             final String filteredRouteID = m.group(1);
             if (!matchBadRoutes.apply(filteredRouteID)) {
-
-                List<RouteBean> gtfsRoutes = _tds.getService().getRoutesForAgencyId(AGENCY_ID).getList();
-
-                Optional<RouteBean> matchedRoute = Iterables.tryFind(gtfsRoutes, new Predicate<RouteBean>() {
-                    public boolean apply(RouteBean gr) {
+                Optional<Route> matchedRoute = Iterables.tryFind(gtfsRoutes, new Predicate<Route>() {
+                    public boolean apply(Route gr) {
                         if (gr.getShortName() != null) {
                             return gr.getShortName().equals(filteredRouteID);
                         } else {
@@ -128,7 +147,7 @@ public class WMATARouteMapperService {
                 });
 
                 if (matchedRoute.isPresent()) {
-                    String mappedRouteID = matchedRoute.get().getId();
+                    AgencyAndId mappedRouteID = matchedRoute.get().getId();
                     _log.info("Mapped WMATA route " + routeID + " to GTFS route " + mappedRouteID);
                     return mappedRouteID;
                 } else {
@@ -145,12 +164,9 @@ public class WMATARouteMapperService {
         }
     }
 
-    private String mapRailRoute(final String routeName) {
-        List<RouteBean> gtfsRoutes = _tds.getService().getRoutesForAgencyId(AGENCY_ID).getList();
-
-
-        Optional<RouteBean> matchedRoute = Iterables.tryFind(gtfsRoutes, new Predicate<RouteBean>() {
-            public boolean apply(RouteBean gr) {
+    private AgencyAndId mapRailRoute(final String routeName) {
+        Optional<Route> matchedRoute = Iterables.tryFind(gtfsRoutes, new Predicate<Route>() {
+            public boolean apply(Route gr) {
                 if (gr.getShortName() != null) {
                     return gr.getShortName().equalsIgnoreCase(routeName);
                 } else {
@@ -160,7 +176,7 @@ public class WMATARouteMapperService {
         });
 
         if (matchedRoute.isPresent()) {
-            String mappedRouteID = matchedRoute.get().getId();
+            AgencyAndId mappedRouteID = matchedRoute.get().getId();
             _log.info("Mapped WMATA route " + routeName + " to GTFS route " + mappedRouteID);
             return mappedRouteID;
         } else {
@@ -170,29 +186,15 @@ public class WMATARouteMapperService {
 
     }
 
-    public String getBusRouteMapping(String routeID) {
-        Element e = _busRouteCache.get(routeID);
-
-        if (e == null) {
-            String mappedRouteID = mapBusRoute(routeID);
-            _busRouteCache.put(new Element(routeID, mappedRouteID));
-            return mappedRouteID;
+    public AgencyAndId getRouteMapping(String routeID) {
+        if (routeMappings.containsKey(routeID)) {
+            return routeMappings.get(routeID);
         } else {
-            return (String) e.getObjectValue();
+            return null;
         }
-
     }
 
-    public String getRailRouteMapping(String routeID) {
-        Element e = _railRouteCache.get(routeID);
-
-        if (e == null) {
-            String mappedRouteID = mapRailRoute(routeID);
-            _railRouteCache.put(new Element(routeID, mappedRouteID));
-            return mappedRouteID;
-        } else {
-            return (String) e.getObjectValue();
-        }
-
+    public Map<String, AgencyAndId> getRouteMappings() {
+        return ImmutableMap.<String, AgencyAndId>copyOf(routeMappings);
     }
 }

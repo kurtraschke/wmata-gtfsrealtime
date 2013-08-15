@@ -47,7 +47,6 @@ import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeGuiceBindingTypes.TripU
 import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeGuiceBindingTypes.VehiclePositions;
 import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeServlet;
 import org.onebusaway.guice.jsr250.LifecycleService;
-import org.slf4j.bridge.SLF4JBridgeHandler;
 
 public class WMATARealtimeMain {
 
@@ -102,11 +101,6 @@ public class WMATARealtimeMain {
     }
 
     public void run(String[] args) throws Exception {
-        //The Hessian client uses java.util.logging, so we bridge it to
-        //slf4j, so all logging is funneled into logback.
-        SLF4JBridgeHandler.removeHandlersForRootLogger();
-        SLF4JBridgeHandler.install();
-
         if (args.length == 0 || CommandLineInterfaceLibrary.wantsHelp(args)) {
             printUsage();
             System.exit(-1);
