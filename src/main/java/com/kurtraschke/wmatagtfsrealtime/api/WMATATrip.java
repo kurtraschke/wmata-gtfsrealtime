@@ -42,7 +42,7 @@ public class WMATATrip implements Serializable {
     public void setDirectionNum(String directionNum) {
         setDirectionNum(Integer.parseInt(directionNum));
     }
-    
+
     public void setDirectionNum(int directionNum) {
         this.directionNum = directionNum;
     }

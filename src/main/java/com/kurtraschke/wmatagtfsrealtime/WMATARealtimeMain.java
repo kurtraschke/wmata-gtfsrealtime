@@ -47,19 +47,24 @@ import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeGuiceBindingTypes.TripU
 import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeGuiceBindingTypes.VehiclePositions;
 import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeServlet;
 import org.onebusaway.guice.jsr250.LifecycleService;
+import org.slf4j.LoggerFactory;
 
 public class WMATARealtimeMain {
 
-    private static final String ARG_CONFIG_FILE = "config";
-    private static File _tripUpdatesPath;
-    private static URL _tripUpdatesUrl;
-    private static File _vehiclePositionsPath;
-    private static URL _vehiclePositionsUrl;
-    private static File _alertsPath;
-    private static URL _alertsUrl;
+    private static final org.slf4j.Logger _log = LoggerFactory.getLogger(WMATARealtimeMain.class);
+    private final String ARG_CONFIG_FILE = "config";
+    private File _tripUpdatesPath;
+    private URL _tripUpdatesUrl;
+    private File _vehiclePositionsPath;
+    private URL _vehiclePositionsUrl;
+    private File _alertsPath;
+    private URL _alertsUrl;
     private Injector _injector;
     private GTFSRealtimeProviderImpl _provider;
     private LifecycleService _lifecycleService;
+    private GtfsRealtimeExporter _vehiclePositionsExporter;
+    private GtfsRealtimeExporter _tripUpdatesExporter;
+    private GtfsRealtimeExporter _alertsExporter;
 
     public static void main(String[] args) throws Exception {
         System.setProperty("net.sf.ehcache.enableShutdownHook", "true");
@@ -71,9 +76,6 @@ public class WMATARealtimeMain {
             System.exit(-1);
         }
     }
-    private GtfsRealtimeExporter _vehiclePositionsExporter;
-    private GtfsRealtimeExporter _tripUpdatesExporter;
-    private GtfsRealtimeExporter _alertsExporter;
 
     @Inject
     public void setProvider(GTFSRealtimeProviderImpl provider) {
@@ -185,6 +187,7 @@ public class WMATARealtimeMain {
         try {
             return _injector.getInstance(Key.get(type, Names.named(configurationKey)));
         } catch (ConfigurationException e) {
+            _log.error("Could not get configuration parameter", e);
             return null;
         }
     }

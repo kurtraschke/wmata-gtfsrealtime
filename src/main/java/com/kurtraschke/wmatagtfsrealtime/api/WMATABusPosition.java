@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2012 Kurt Raschke
- * 
+ * Copyright (C) 2013 Kurt Raschke
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -159,6 +158,7 @@ public class WMATABusPosition implements Serializable {
     }
     
     public ServiceDate getServiceDate() {
+        //FIXME: assumes JVM timezone is US/Eastern
         return new ServiceDate(this.getTripStartTime());
     }
 

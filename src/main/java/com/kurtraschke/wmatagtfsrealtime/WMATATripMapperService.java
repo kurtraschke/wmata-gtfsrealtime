@@ -1,7 +1,6 @@
 /*
  * Copyright (C) 2013 Kurt Raschke
  *
- *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
  * the License at
@@ -140,14 +139,14 @@ public class WMATATripMapperService {
                 } else {
                     /*
                      * In this case, we had one or more candidate trips from the
-                     * GTFS schedule to evaluate, but the best of them produced a score that 
+                     * GTFS schedule to evaluate, but the best of them produced a score that
                      * was too high to consider a reliable match.
                      */
                     _log.warn("Could not map WMATA trip " + theTrip.getTripID() + " on route " + theTrip.getRouteID() + " with score " + Math.round(result));
                     return null;
                 }
             } else {
-                /* 
+                /*
                  * This is the case where the GTFS schedule simply doesn't return any active
                  * trips for that route and time.
                  */
@@ -155,7 +154,7 @@ public class WMATATripMapperService {
                 return null;
             }
         } else {
-            /* 
+            /*
              * This is the case where we could not map the route;
              * no sense trying to map the trip when we don't know the route.
              */

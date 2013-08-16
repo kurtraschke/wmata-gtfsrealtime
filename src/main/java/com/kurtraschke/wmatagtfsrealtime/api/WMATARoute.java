@@ -1,6 +1,5 @@
 /*
  * Copyright (C) 2012 Kurt Raschke
- * 
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,9 +26,8 @@ public class WMATARoute implements Serializable {
     private static final long serialVersionUID = 1L;
     private String name;
     private String routeID;
-
     private WMATARouteScheduleInfo scheduleInfo;
-    
+
     public String getName() {
         return name;
     }
@@ -53,5 +51,4 @@ public class WMATARoute implements Serializable {
     public void setScheduleInfo(WMATARouteScheduleInfo scheduleInfo) {
         this.scheduleInfo = scheduleInfo;
     }
-
 }
