@@ -187,7 +187,6 @@ public class WMATARealtimeMain {
         try {
             return _injector.getInstance(Key.get(type, Names.named(configurationKey)));
         } catch (ConfigurationException e) {
-            _log.error("Could not get configuration parameter", e);
             return null;
         }
     }

@@ -47,7 +47,6 @@ import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.Element;
 import org.onebusaway.gtfs.model.AgencyAndId;
-import org.onebusaway.gtfs.model.calendar.ServiceDate;
 import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeGuiceBindingTypes.Alerts;
 import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeGuiceBindingTypes.TripUpdates;
 import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeGuiceBindingTypes.VehiclePositions;
@@ -75,18 +74,21 @@ public class GTFSRealtimeProviderImpl {
     private WMATATripMapperService _tripMapperService;
     private CacheManager _cacheManager;
     private Cache _alertIDCache;
+    private GtfsRealtimeSink _vehiclePositionsSink;
+    private GtfsRealtimeSink _tripUpdatesSink;
+    private GtfsRealtimeSink _alertsSink;
     /**
      * How often vehicle data will be downloaded, in seconds.
      */
     @Inject
     @Named("refreshInterval.vehicles")
     private int _vehicleRefreshInterval;
+    /**
+     * How often alert data will be downloaded, in seconds.
+     */
     @Inject
     @Named("refreshInterval.alerts")
     private int _alertRefreshInterval;
-    private GtfsRealtimeSink _vehiclePositionsSink;
-    private GtfsRealtimeSink _tripUpdatesSink;
-    private GtfsRealtimeSink _alertsSink;
 
     @Inject
     public void setVehiclePositionsSink(@VehiclePositions GtfsRealtimeSink sink) {
@@ -169,17 +171,10 @@ public class GTFSRealtimeProviderImpl {
          * We download the vehicle details as an array of objects.
          */
         List<WMATABusPosition> busPositions = _api.downloadBusPositions();
+
         /**
          * We iterate over every vehicle object.
          */
-        Set<ServiceDate> serviceDates = new HashSet<ServiceDate>();
-
-        for (WMATABusPosition bp : busPositions) {
-            serviceDates.add(bp.getServiceDate());
-        }
-
-        _tripMapperService.setupForServiceDates(serviceDates);
-
         for (WMATABusPosition bp : busPositions) {
             try {
                 ProcessedVehicleResponse pvr = processVehicle(bp);

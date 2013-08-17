@@ -48,10 +48,9 @@ public class WMATARouteMapperService {
 
     private static final org.slf4j.Logger _log = LoggerFactory.getLogger(WMATARouteMapperService.class);
     private WMATAAPIService _api;
-    private GtfsRelationalDao _dao;
+    private GtfsDaoService _daoService;
     private String[] badRoutes;
     private final Pattern routeExtract = Pattern.compile("^([A-Z0-9]+)(c?v?S?[0-9]?).*$");
-    private Map<String, AgencyAndId> staticMappings = new HashMap<String, AgencyAndId>();
     private Map<String, AgencyAndId> routeMappings = new HashMap<String, AgencyAndId>();
     private Predicate<String> matchBadRoutes;
     @Inject
@@ -59,12 +58,12 @@ public class WMATARouteMapperService {
     private String AGENCY_ID;
     @Inject
     @Named("WMATA.staticMappings")
-    private Properties staticMappingProperties;
+    private Properties staticMappings;
     private List<Route> gtfsRoutes;
 
     @Inject
-    public void setGtfsRelationalDao(GtfsDaoService dao) {
-        _dao = dao.getDao();
+    public void setGtfsDaoService(GtfsDaoService daoService) {
+        _daoService = daoService;
     }
 
     @Inject
@@ -80,8 +79,8 @@ public class WMATARouteMapperService {
 
     @PostConstruct
     public void start() throws IOException, SAXException {
-        gtfsRoutes = _dao.getRoutesForAgency(_dao.getAgencyForId(AGENCY_ID));
-        fixStaticMappings();
+        GtfsRelationalDao dao = _daoService.getGtfsRelationalDao();
+        gtfsRoutes = dao.getRoutesForAgency(dao.getAgencyForId(AGENCY_ID));
         primeCaches();
     }
 
@@ -105,28 +104,11 @@ public class WMATARouteMapperService {
         }
     }
 
-    public void fixStaticMappings() {
-        for (final String key : staticMappingProperties.stringPropertyNames()) {
-            Optional<Route> matchedRoute = Iterables.tryFind(gtfsRoutes, new Predicate<Route>() {
-                public boolean apply(Route gr) {
-                    if (gr.getShortName() != null) {
-                        return gr.getShortName().equals(staticMappingProperties.getProperty(key));
-                    } else {
-                        return false;
-                    }
-                }
-            });
-
-            if (matchedRoute.isPresent()) {
-                AgencyAndId mappedRouteID = matchedRoute.get().getId();
-                staticMappings.put(key, mappedRouteID);
-            }
-        }
-    }
-
     private AgencyAndId mapBusRoute(String routeID) {
         if (staticMappings.containsKey(routeID)) {
-            AgencyAndId mappedRouteID = staticMappings.get(routeID);
+            Route matchedRoute = Iterables.find(gtfsRoutes,
+                    new ShortNameFilterPredicate(staticMappings.getProperty(routeID), true));
+            AgencyAndId mappedRouteID = matchedRoute.getId();
             _log.info("Mapped WMATA route " + routeID + " to GTFS route " + mappedRouteID + " (using override)");
             return mappedRouteID;
         }
@@ -136,15 +118,8 @@ public class WMATARouteMapperService {
         if (m.matches()) {
             final String filteredRouteID = m.group(1);
             if (!matchBadRoutes.apply(filteredRouteID)) {
-                Optional<Route> matchedRoute = Iterables.tryFind(gtfsRoutes, new Predicate<Route>() {
-                    public boolean apply(Route gr) {
-                        if (gr.getShortName() != null) {
-                            return gr.getShortName().equals(filteredRouteID);
-                        } else {
-                            return false;
-                        }
-                    }
-                });
+                Optional<Route> matchedRoute = Iterables.tryFind(gtfsRoutes,
+                        new ShortNameFilterPredicate(filteredRouteID, true));
 
                 if (matchedRoute.isPresent()) {
                     AgencyAndId mappedRouteID = matchedRoute.get().getId();
@@ -164,16 +139,9 @@ public class WMATARouteMapperService {
         }
     }
 
-    private AgencyAndId mapRailRoute(final String routeName) {
-        Optional<Route> matchedRoute = Iterables.tryFind(gtfsRoutes, new Predicate<Route>() {
-            public boolean apply(Route gr) {
-                if (gr.getShortName() != null) {
-                    return gr.getShortName().equalsIgnoreCase(routeName);
-                } else {
-                    return false;
-                }
-            }
-        });
+    private AgencyAndId mapRailRoute(String routeName) {
+        Optional<Route> matchedRoute = Iterables.tryFind(gtfsRoutes,
+                new ShortNameFilterPredicate(routeName, false));
 
         if (matchedRoute.isPresent()) {
             AgencyAndId mappedRouteID = matchedRoute.get().getId();
@@ -183,7 +151,6 @@ public class WMATARouteMapperService {
             _log.warn("Could not map WMATA route: " + routeName);
             return null;
         }
-
     }
 
     public AgencyAndId getRouteMapping(String routeID) {
@@ -196,5 +163,28 @@ public class WMATARouteMapperService {
 
     public Map<String, AgencyAndId> getRouteMappings() {
         return ImmutableMap.<String, AgencyAndId>copyOf(routeMappings);
+    }
+
+    private static class ShortNameFilterPredicate implements Predicate<Route> {
+
+        private String shortName;
+        private boolean caseSensitive;
+
+        public ShortNameFilterPredicate(String shortName, boolean caseSensitive) {
+            this.shortName = shortName;
+            this.caseSensitive = caseSensitive;
+        }
+
+        public boolean apply(Route r) {
+            if (r.getShortName() != null) {
+                if (caseSensitive) {
+                    return r.getShortName().equals(shortName);
+                } else {
+                    return r.getShortName().equalsIgnoreCase(shortName);
+                }
+            } else {
+                return false;
+            }
+        }
     }
 }

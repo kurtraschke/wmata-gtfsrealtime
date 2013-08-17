@@ -43,6 +43,11 @@ public class WMATABusPosition implements Serializable {
     private Date tripEndTime;
     private String vehicleID;
 
+    public WMATABusPosition() {
+        parseFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+        parseFormat.setTimeZone(TimeZone.getTimeZone("US/Eastern"));
+    }
+
     public Date getDateTime() {
         return dateTime;
     }
@@ -156,14 +161,9 @@ public class WMATABusPosition implements Serializable {
     public void setVehicleID(String vehicleID) {
         this.vehicleID = vehicleID;
     }
-    
+
     public ServiceDate getServiceDate() {
         //FIXME: assumes JVM timezone is US/Eastern
         return new ServiceDate(this.getTripStartTime());
-    }
-
-    public WMATABusPosition() {
-        parseFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-        parseFormat.setTimeZone(TimeZone.getTimeZone("US/Eastern"));
     }
 }

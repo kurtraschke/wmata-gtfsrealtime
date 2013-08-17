@@ -19,6 +19,7 @@ import java.io.Serializable;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 
 /**
  *
@@ -27,12 +28,17 @@ import java.util.Date;
 public class WMATAStopTime implements Serializable, Comparable<WMATAStopTime> {
 
     private static final long serialVersionUID = 1L;
-    private final SimpleDateFormat parseFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+    private final SimpleDateFormat parseFormat;
     private String stopID;
     private String stopName;
-    private String stopSeq;
+    private int stopSeq;
     private Date time;
     private WMATAStop stop;
+
+    public WMATAStopTime() {
+        parseFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+        parseFormat.setTimeZone(TimeZone.getTimeZone("US/Eastern"));
+    }
 
     public String getStopID() {
         return stopID;
@@ -50,12 +56,12 @@ public class WMATAStopTime implements Serializable, Comparable<WMATAStopTime> {
         this.stopName = stopName;
     }
 
-    public String getStopSeq() {
+    public int getStopSeq() {
         return stopSeq;
     }
 
     public void setStopSeq(String stopSeq) {
-        this.stopSeq = stopSeq;
+        this.stopSeq = Integer.parseInt(stopSeq);
     }
 
     public Date getTime() {

@@ -22,9 +22,12 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import org.onebusaway.gtfs.impl.GtfsRelationalDaoImpl;
+import org.onebusaway.gtfs.impl.calendar.CalendarServiceDataFactoryImpl;
+import org.onebusaway.gtfs.model.calendar.CalendarServiceData;
 import org.onebusaway.gtfs.serialization.GtfsReader;
 import org.onebusaway.gtfs.services.GtfsMutableRelationalDao;
 import org.onebusaway.gtfs.services.GtfsRelationalDao;
+import org.onebusaway.gtfs.services.calendar.CalendarServiceDataFactory;
 
 /**
  *
@@ -33,24 +36,34 @@ import org.onebusaway.gtfs.services.GtfsRelationalDao;
 @Singleton
 public class GtfsDaoService {
 
-    @Inject
-    @Named("GTFS.path")
-    public File gtfsPath;
-    public GtfsMutableRelationalDao dao;
+    private File _gtfsPath;
+    private GtfsMutableRelationalDao dao;
+    private CalendarServiceData csd;
 
-    public GtfsRelationalDao getDao() {
+    public GtfsDaoService() {
+    }
+
+    @Inject
+    public void setGtfsPath(@Named("GTFS.path") File gtfsPath) {
+        this._gtfsPath = gtfsPath;
+    }
+
+    public GtfsRelationalDao getGtfsRelationalDao() {
         return dao;
     }
 
-    public GtfsDaoService() {
-        dao = new GtfsRelationalDaoImpl();
+    public CalendarServiceData getCalendarServiceData() {
+        return csd;
     }
 
     @PostConstruct
     public void start() throws IOException {
+        dao = new GtfsRelationalDaoImpl();
         GtfsReader reader = new GtfsReader();
-        reader.setInputLocation(gtfsPath);
+        reader.setInputLocation(_gtfsPath);
         reader.setEntityStore(dao);
         reader.run();
+        CalendarServiceDataFactory csdf = new CalendarServiceDataFactoryImpl(dao);
+        csd = csdf.createData();
     }
 }
