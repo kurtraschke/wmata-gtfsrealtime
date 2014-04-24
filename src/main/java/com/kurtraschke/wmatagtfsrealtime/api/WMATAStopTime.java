@@ -15,11 +15,11 @@
  */
 package com.kurtraschke.wmatagtfsrealtime.api;
 
+import com.kurtraschke.wmatagtfsrealtime.DateParser;
+
 import java.io.Serializable;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.TimeZone;
 
 /**
  *
@@ -27,60 +27,54 @@ import java.util.TimeZone;
  */
 public class WMATAStopTime implements Serializable, Comparable<WMATAStopTime> {
 
-    private static final long serialVersionUID = 1L;
-    private final SimpleDateFormat parseFormat;
-    private String stopID;
-    private String stopName;
-    private int stopSeq;
-    private Date time;
-    private WMATAStop stop;
+  private static final long serialVersionUID = 1L;
+  private String stopID;
+  private String stopName;
+  private int stopSeq;
+  private Date time;
+  private WMATAStop stop;
 
-    public WMATAStopTime() {
-        parseFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-        parseFormat.setTimeZone(TimeZone.getTimeZone("US/Eastern"));
-    }
+  public String getStopID() {
+    return stopID;
+  }
 
-    public String getStopID() {
-        return stopID;
-    }
+  public void setStopID(String stopID) {
+    this.stopID = stopID;
+  }
 
-    public void setStopID(String stopID) {
-        this.stopID = stopID;
-    }
+  public String getStopName() {
+    return stopName;
+  }
 
-    public String getStopName() {
-        return stopName;
-    }
+  public void setStopName(String stopName) {
+    this.stopName = stopName;
+  }
 
-    public void setStopName(String stopName) {
-        this.stopName = stopName;
-    }
+  public int getStopSeq() {
+    return stopSeq;
+  }
 
-    public int getStopSeq() {
-        return stopSeq;
-    }
+  public void setStopSeq(String stopSeq) {
+    this.stopSeq = Integer.parseInt(stopSeq);
+  }
 
-    public void setStopSeq(String stopSeq) {
-        this.stopSeq = Integer.parseInt(stopSeq);
-    }
+  public Date getTime() {
+    return time;
+  }
 
-    public Date getTime() {
-        return time;
-    }
+  public void setTime(String time) throws ParseException {
+    this.time = DateParser.parse(time);
+  }
 
-    public void setTime(String time) throws ParseException {
-        this.time = parseFormat.parse(time);
-    }
+  public WMATAStop getStop() {
+    return stop;
+  }
 
-    public WMATAStop getStop() {
-        return stop;
-    }
+  public void setStop(WMATAStop stop) {
+    this.stop = stop;
+  }
 
-    public void setStop(WMATAStop stop) {
-        this.stop = stop;
-    }
-
-    public int compareTo(WMATAStopTime o) {
-        return this.getTime().compareTo(o.getTime());
-    }
+  public int compareTo(WMATAStopTime o) {
+    return this.getTime().compareTo(o.getTime());
+  }
 }

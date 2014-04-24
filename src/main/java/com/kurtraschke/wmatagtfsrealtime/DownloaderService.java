@@ -18,9 +18,7 @@
 package com.kurtraschke.wmatagtfsrealtime;
 
 import com.google.common.util.concurrent.RateLimiter;
-import java.io.IOException;
-import java.io.InputStream;
-import javax.inject.Singleton;
+
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -28,6 +26,11 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.DecompressingHttpClient;
 import org.apache.http.impl.client.DefaultHttpClient;
+
+import java.io.IOException;
+import java.io.InputStream;
+
+import javax.inject.Singleton;
 
 /**
  * All calls to the WMATA API go through this class, which ensures that the API
@@ -37,17 +40,18 @@ import org.apache.http.impl.client.DefaultHttpClient;
 @Singleton
 public class DownloaderService {
 
-    private HttpClient _client = new DecompressingHttpClient(new DefaultHttpClient());
-    private RateLimiter _limiter = RateLimiter.create(2.5);
+  private HttpClient _client = new DecompressingHttpClient(
+      new DefaultHttpClient());
+  private RateLimiter _limiter = RateLimiter.create(4);
 
-    public synchronized InputStream openUrl(String uri) throws IOException {
-        _limiter.acquire();
+  public synchronized InputStream openUrl(String uri) throws IOException {
+    _limiter.acquire();
 
-        HttpUriRequest request = new HttpGet(uri);
-        HttpResponse response = _client.execute(request);
-        HttpEntity entity = response.getEntity();
+    HttpUriRequest request = new HttpGet(uri);
+    HttpResponse response = _client.execute(request);
+    HttpEntity entity = response.getEntity();
 
-        InputStream in = entity.getContent();
-        return in;
-    }
+    InputStream in = entity.getContent();
+    return in;
+  }
 }

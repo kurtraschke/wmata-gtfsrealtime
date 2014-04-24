@@ -29,65 +29,65 @@ import java.util.UUID;
  */
 public class WMATAAlert implements Serializable {
 
-    private static final long serialVersionUID = 1L;
-    private final SimpleDateFormat parseFormat;
-    private String title;
-    private String link;
-    private String description;
-    private String source;
-    private Date pubDate;
-    private UUID guid;
+  private static final long serialVersionUID = 1L;
+  private final SimpleDateFormat parseFormat;
+  private String title;
+  private String link;
+  private String description;
+  private String source;
+  private Date pubDate;
+  private UUID guid;
 
-    public String getTitle() {
-        return title;
-    }
+  public String getTitle() {
+    return title;
+  }
 
-    public void setTitle(String title) {
-        this.title = title;
-    }
+  public void setTitle(String title) {
+    this.title = title;
+  }
 
-    public String getLink() {
-        return link;
-    }
+  public String getLink() {
+    return link;
+  }
 
-    public void setLink(String link) {
-        this.link = link;
-    }
+  public void setLink(String link) {
+    this.link = link;
+  }
 
-    public String getDescription() {
-        return description;
-    }
+  public String getDescription() {
+    return description;
+  }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
+  public void setDescription(String description) {
+    this.description = description;
+  }
 
-    public String getSource() {
-        return source;
-    }
+  public String getSource() {
+    return source;
+  }
 
-    public void setSource(String source) {
-        this.source = source;
-    }
+  public void setSource(String source) {
+    this.source = source;
+  }
 
-    public Date getPubDate() {
-        return pubDate;
-    }
+  public Date getPubDate() {
+    return pubDate;
+  }
 
-    public void setPubDate(String pubDate) throws ParseException {
-        this.pubDate = parseFormat.parse(pubDate);
-    }
+  public void setPubDate(String pubDate) throws ParseException {
+    this.pubDate = parseFormat.parse(pubDate);
+  }
 
-    public UUID getGuid() {
-        return guid;
-    }
+  public UUID getGuid() {
+    return guid;
+  }
 
-    public void setGuid(String guid) {
-        this.guid = UUID.fromString(guid);
-    }
+  public void setGuid(String guid) {
+    this.guid = UUID.fromString(guid);
+  }
 
-    public WMATAAlert() {
-        parseFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss z");
-        parseFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-    }
+  public WMATAAlert() {
+    parseFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss z");
+    parseFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+  }
 }

@@ -23,32 +23,32 @@ import java.io.Serializable;
  */
 public class WMATARoute implements Serializable {
 
-    private static final long serialVersionUID = 1L;
-    private String name;
-    private String routeID;
-    private WMATARouteScheduleInfo scheduleInfo;
+  private static final long serialVersionUID = 1L;
+  private String name;
+  private String routeID;
+  private WMATARouteScheduleInfo scheduleInfo;
 
-    public String getName() {
-        return name;
-    }
+  public String getName() {
+    return name;
+  }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+  public void setName(String name) {
+    this.name = name;
+  }
 
-    public String getRouteID() {
-        return routeID;
-    }
+  public String getRouteID() {
+    return routeID;
+  }
 
-    public void setRouteID(String routeID) {
-        this.routeID = routeID;
-    }
+  public void setRouteID(String routeID) {
+    this.routeID = routeID;
+  }
 
-    public WMATARouteScheduleInfo getScheduleInfo() {
-        return scheduleInfo;
-    }
+  public WMATARouteScheduleInfo getScheduleInfo() {
+    return scheduleInfo;
+  }
 
-    public void setScheduleInfo(WMATARouteScheduleInfo scheduleInfo) {
-        this.scheduleInfo = scheduleInfo;
-    }
+  public void setScheduleInfo(WMATARouteScheduleInfo scheduleInfo) {
+    this.scheduleInfo = scheduleInfo;
+  }
 }

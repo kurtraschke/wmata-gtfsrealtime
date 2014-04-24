@@ -15,8 +15,9 @@
  */
 package com.kurtraschke.wmatagtfsrealtime;
 
-import java.io.Serializable;
 import org.onebusaway.gtfs.model.calendar.ServiceDate;
+
+import java.io.Serializable;
 
 /**
  *
@@ -24,38 +25,41 @@ import org.onebusaway.gtfs.model.calendar.ServiceDate;
  */
 public class TripMapKey implements Serializable {
 
-    private static final long serialVersionUID = 2L;
-    public ServiceDate serviceDate;
-    public String tripID;
+  private static final long serialVersionUID = 2L;
+  public ServiceDate serviceDate;
+  public String tripID;
 
-    @Override
-    public int hashCode() {
-        int hash = 7;
-        hash = 23 * hash + (this.serviceDate != null ? this.serviceDate.hashCode() : 0);
-        hash = 23 * hash + (this.tripID != null ? this.tripID.hashCode() : 0);
-        return hash;
-    }
+  @Override
+  public int hashCode() {
+    int hash = 7;
+    hash = 23 * hash
+        + (this.serviceDate != null ? this.serviceDate.hashCode() : 0);
+    hash = 23 * hash + (this.tripID != null ? this.tripID.hashCode() : 0);
+    return hash;
+  }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final TripMapKey other = (TripMapKey) obj;
-        if (this.serviceDate != other.serviceDate && (this.serviceDate == null || !this.serviceDate.equals(other.serviceDate))) {
-            return false;
-        }
-        if ((this.tripID == null) ? (other.tripID != null) : !this.tripID.equals(other.tripID)) {
-            return false;
-        }
-        return true;
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null) {
+      return false;
     }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    final TripMapKey other = (TripMapKey) obj;
+    if (this.serviceDate != other.serviceDate
+        && (this.serviceDate == null || !this.serviceDate.equals(other.serviceDate))) {
+      return false;
+    }
+    if ((this.tripID == null) ? (other.tripID != null)
+        : !this.tripID.equals(other.tripID)) {
+      return false;
+    }
+    return true;
+  }
 
-    public TripMapKey(ServiceDate serviceDate, String tripID) {
-        this.serviceDate = serviceDate;
-        this.tripID = tripID;
-    }
+  public TripMapKey(ServiceDate serviceDate, String tripID) {
+    this.serviceDate = serviceDate;
+    this.tripID = tripID;
+  }
 }

@@ -30,67 +30,67 @@ import java.util.Set;
  */
 public class WMATARouteScheduleInfo implements Serializable {
 
-    private static final long serialVersionUID = 1L;
-    private String name;
-    private Map<Integer, WMATADirection> directions = new HashMap<Integer, WMATADirection>();
+  private static final long serialVersionUID = 1L;
+  private String name;
+  private Map<Integer, WMATADirection> directions = new HashMap<Integer, WMATADirection>();
 
-    public WMATARouteScheduleInfo() {
-        WMATADirection d0 = new WMATADirection();
-        d0.setDirectionNum(0);
-        directions.put(0, d0);
+  public WMATARouteScheduleInfo() {
+    WMATADirection d0 = new WMATADirection();
+    d0.setDirectionNum(0);
+    directions.put(0, d0);
 
-        WMATADirection d1 = new WMATADirection();
-        d1.setDirectionNum(1);
-        directions.put(1, d0);
+    WMATADirection d1 = new WMATADirection();
+    d1.setDirectionNum(1);
+    directions.put(1, d0);
 
+  }
+
+  public String getName() {
+    return name;
+  }
+
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  public void addDirection0Trip(WMATATrip trip) {
+    directions.get(0).addTrip(trip);
+  }
+
+  public List<WMATATrip> getDirection0Trips() {
+    return directions.get(0).getTrips();
+  }
+
+  public void addDirection1Trip(WMATATrip trip) {
+    directions.get(1).addTrip(trip);
+  }
+
+  public List<WMATATrip> getDirection1Trips() {
+    return directions.get(1).getTrips();
+  }
+
+  public Collection<WMATADirection> getDirections() {
+    return directions.values();
+  }
+
+  public Collection<WMATAStop> getStops() {
+    Set<WMATAStop> stops = new HashSet<WMATAStop>();
+
+    for (WMATADirection d : directions.values()) {
+      stops.addAll(d.getStops());
     }
 
-    public String getName() {
-        return name;
+    return stops;
+
+  }
+
+  public List<WMATATrip> getTrips() {
+    List<WMATATrip> trips = new ArrayList<WMATATrip>();
+
+    for (WMATADirection d : directions.values()) {
+      trips.addAll(d.getTrips());
     }
+    return trips;
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public void addDirection0Trip(WMATATrip trip) {
-        directions.get(0).addTrip(trip);
-    }
-
-    public List<WMATATrip> getDirection0Trips() {
-        return directions.get(0).getTrips();
-    }
-
-    public void addDirection1Trip(WMATATrip trip) {
-        directions.get(1).addTrip(trip);
-    }
-
-    public List<WMATATrip> getDirection1Trips() {
-        return directions.get(1).getTrips();
-    }
-
-    public Collection<WMATADirection> getDirections() {
-        return directions.values();
-    }
-
-    public Collection<WMATAStop> getStops() {
-        Set<WMATAStop> stops = new HashSet<WMATAStop>();
-
-        for (WMATADirection d : directions.values()) {
-            stops.addAll(d.getStops());
-        }
-
-        return stops;
-
-    }
-
-    public List<WMATATrip> getTrips() {
-        List<WMATATrip> trips = new ArrayList<WMATATrip>();
-
-        for (WMATADirection d : directions.values()) {
-            trips.addAll(d.getTrips());
-        }
-        return trips;
-
-    }
+  }
 }

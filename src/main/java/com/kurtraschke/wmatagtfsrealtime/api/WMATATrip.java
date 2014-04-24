@@ -15,8 +15,12 @@
  */
 package com.kurtraschke.wmatagtfsrealtime.api;
 
+import com.kurtraschke.wmatagtfsrealtime.DateParser;
+
 import java.io.Serializable;
+import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -25,81 +29,81 @@ import java.util.List;
  */
 public class WMATATrip implements Serializable {
 
-    private static final long serialVersionUID = 1L;
-    private int directionNum;
-    private String endTime;
-    private String routeID;
-    private String startTime;
-    private String tripDirectionText;
-    private String tripHeadsign;
-    private String tripID;
-    private List<WMATAStopTime> stopTimes = new ArrayList<WMATAStopTime>();
+  private static final long serialVersionUID = 1L;
+  private int directionNum;
+  private Date endTime;
+  private String routeID;
+  private Date startTime;
+  private String tripDirectionText;
+  private String tripHeadsign;
+  private String tripID;
+  private List<WMATAStopTime> stopTimes = new ArrayList<WMATAStopTime>();
 
-    public int getDirectionNum() {
-        return directionNum;
-    }
+  public int getDirectionNum() {
+    return directionNum;
+  }
 
-    public void setDirectionNum(String directionNum) {
-        setDirectionNum(Integer.parseInt(directionNum));
-    }
+  public void setDirectionNum(String directionNum) {
+    setDirectionNum(Integer.parseInt(directionNum));
+  }
 
-    public void setDirectionNum(int directionNum) {
-        this.directionNum = directionNum;
-    }
+  public void setDirectionNum(int directionNum) {
+    this.directionNum = directionNum;
+  }
 
-    public String getEndTime() {
-        return endTime;
-    }
+  public Date getEndTime() {
+    return endTime;
+  }
 
-    public void setEndTime(String endTime) {
-        this.endTime = endTime;
-    }
+  public void setEndTime(String endTime) throws ParseException {
+    this.endTime = DateParser.parse(endTime);
+  }
 
-    public String getRouteID() {
-        return routeID;
-    }
+  public String getRouteID() {
+    return routeID;
+  }
 
-    public void setRouteID(String routeID) {
-        this.routeID = routeID;
-    }
+  public void setRouteID(String routeID) {
+    this.routeID = routeID;
+  }
 
-    public String getStartTime() {
-        return startTime;
-    }
+  public Date getStartTime() {
+    return startTime;
+  }
 
-    public void setStartTime(String startTime) {
-        this.startTime = startTime;
-    }
+  public void setStartTime(String startTime) throws ParseException {
+    this.startTime = DateParser.parse(startTime);
+  }
 
-    public String getTripDirectionText() {
-        return tripDirectionText;
-    }
+  public String getTripDirectionText() {
+    return tripDirectionText;
+  }
 
-    public void setTripDirectionText(String tripDirectionText) {
-        this.tripDirectionText = tripDirectionText;
-    }
+  public void setTripDirectionText(String tripDirectionText) {
+    this.tripDirectionText = tripDirectionText;
+  }
 
-    public String getTripHeadsign() {
-        return tripHeadsign;
-    }
+  public String getTripHeadsign() {
+    return tripHeadsign;
+  }
 
-    public void setTripHeadsign(String tripHeadsign) {
-        this.tripHeadsign = tripHeadsign;
-    }
+  public void setTripHeadsign(String tripHeadsign) {
+    this.tripHeadsign = tripHeadsign;
+  }
 
-    public String getTripID() {
-        return tripID;
-    }
+  public String getTripID() {
+    return tripID;
+  }
 
-    public void setTripID(String tripID) {
-        this.tripID = tripID;
-    }
+  public void setTripID(String tripID) {
+    this.tripID = tripID;
+  }
 
-    public void addStopTime(WMATAStopTime stopTime) {
-        stopTimes.add(stopTime);
-    }
+  public void addStopTime(WMATAStopTime stopTime) {
+    stopTimes.add(stopTime);
+  }
 
-    public List<WMATAStopTime> getStopTimes() {
-        return stopTimes;
-    }
+  public List<WMATAStopTime> getStopTimes() {
+    return stopTimes;
+  }
 }

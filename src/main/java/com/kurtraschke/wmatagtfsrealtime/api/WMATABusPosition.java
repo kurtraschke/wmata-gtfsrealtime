@@ -15,12 +15,13 @@
  */
 package com.kurtraschke.wmatagtfsrealtime.api;
 
+import org.onebusaway.gtfs.model.calendar.ServiceDate;
+
+import com.kurtraschke.wmatagtfsrealtime.DateParser;
+
 import java.io.Serializable;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.TimeZone;
-import org.onebusaway.gtfs.model.calendar.ServiceDate;
 
 /**
  *
@@ -28,142 +29,136 @@ import org.onebusaway.gtfs.model.calendar.ServiceDate;
  */
 public class WMATABusPosition implements Serializable {
 
-    private static final long serialVersionUID = 1L;
-    private final SimpleDateFormat parseFormat;
-    private Date dateTime;
-    private float deviation;
-    private int directionNum;
-    private String directionText;
-    private float lat;
-    private float lon;
-    private String routeID;
-    private String tripHeadsign;
-    private String tripID;
-    private Date tripStartTime;
-    private Date tripEndTime;
-    private String vehicleID;
+  private static final long serialVersionUID = 1L;
+  private Date dateTime;
+  private float deviation;
+  private int directionNum;
+  private String directionText;
+  private float lat;
+  private float lon;
+  private String routeID;
+  private String tripHeadsign;
+  private String tripID;
+  private Date tripStartTime;
+  private Date tripEndTime;
+  private String vehicleID;
 
-    public WMATABusPosition() {
-        parseFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-        parseFormat.setTimeZone(TimeZone.getTimeZone("US/Eastern"));
-    }
+  public Date getDateTime() {
+    return dateTime;
+  }
 
-    public Date getDateTime() {
-        return dateTime;
-    }
+  public void setDateTime(String dateTime) throws ParseException {
+    this.dateTime = DateParser.parse(dateTime);
+  }
 
-    public void setDateTime(String dateTime) throws ParseException {
-        this.dateTime = parseFormat.parse(dateTime);
-    }
+  public float getDeviation() {
+    return deviation;
+  }
 
-    public float getDeviation() {
-        return deviation;
-    }
+  public void setDeviation(String deviation) {
+    setDeviation(Float.parseFloat(deviation));
+  }
 
-    public void setDeviation(String deviation) {
-        setDeviation(Float.parseFloat(deviation));
-    }
+  public void setDeviation(float deviation) {
+    this.deviation = deviation;
+  }
 
-    public void setDeviation(float deviation) {
-        this.deviation = deviation;
-    }
+  public int getDirectionNum() {
+    return directionNum;
+  }
 
-    public int getDirectionNum() {
-        return directionNum;
-    }
+  public void setDirectionNum(String directionNum) {
+    setDirectionNum(Integer.parseInt(directionNum));
 
-    public void setDirectionNum(String directionNum) {
-        setDirectionNum(Integer.parseInt(directionNum));
+  }
 
-    }
+  public void setDirectionNum(int directionNum) {
+    this.directionNum = directionNum;
+  }
 
-    public void setDirectionNum(int directionNum) {
-        this.directionNum = directionNum;
-    }
+  public String getDirectionText() {
+    return directionText;
+  }
 
-    public String getDirectionText() {
-        return directionText;
-    }
+  public void setDirectionText(String directionText) {
+    this.directionText = directionText;
+  }
 
-    public void setDirectionText(String directionText) {
-        this.directionText = directionText;
-    }
+  public float getLat() {
+    return lat;
+  }
 
-    public float getLat() {
-        return lat;
-    }
+  public void setLat(String lat) {
+    setLat(Float.parseFloat(lat));
 
-    public void setLat(String lat) {
-        setLat(Float.parseFloat(lat));
+  }
 
-    }
+  public void setLat(float lat) {
+    this.lat = lat;
+  }
 
-    public void setLat(float lat) {
-        this.lat = lat;
-    }
+  public float getLon() {
+    return lon;
+  }
 
-    public float getLon() {
-        return lon;
-    }
+  public void setLon(String lon) {
+    setLon(Float.parseFloat(lon));
+  }
 
-    public void setLon(String lon) {
-        setLon(Float.parseFloat(lon));
-    }
+  public void setLon(float lon) {
+    this.lon = lon;
+  }
 
-    public void setLon(float lon) {
-        this.lon = lon;
-    }
+  public String getRouteID() {
+    return routeID;
+  }
 
-    public String getRouteID() {
-        return routeID;
-    }
+  public void setRouteID(String routeID) {
+    this.routeID = routeID;
+  }
 
-    public void setRouteID(String routeID) {
-        this.routeID = routeID;
-    }
+  public String getTripHeadsign() {
+    return tripHeadsign;
+  }
 
-    public String getTripHeadsign() {
-        return tripHeadsign;
-    }
+  public void setTripHeadsign(String tripHeadsign) {
+    this.tripHeadsign = tripHeadsign;
+  }
 
-    public void setTripHeadsign(String tripHeadsign) {
-        this.tripHeadsign = tripHeadsign;
-    }
+  public String getTripID() {
+    return tripID;
+  }
 
-    public String getTripID() {
-        return tripID;
-    }
+  public void setTripID(String tripID) {
+    this.tripID = tripID;
+  }
 
-    public void setTripID(String tripID) {
-        this.tripID = tripID;
-    }
+  public Date getTripStartTime() {
+    return tripStartTime;
+  }
 
-    public Date getTripStartTime() {
-        return tripStartTime;
-    }
+  public void setTripStartTime(String tripStartTime) throws ParseException {
+    this.tripStartTime = DateParser.parse(tripStartTime);
+  }
 
-    public void setTripStartTime(String tripStartTime) throws ParseException {
-        this.tripStartTime = parseFormat.parse(tripStartTime);
-    }
+  public Date getTripEndTime() {
+    return tripEndTime;
+  }
 
-    public Date getTripEndTime() {
-        return tripEndTime;
-    }
+  public void setTripEndTime(String tripEndTime) throws ParseException {
+    this.tripEndTime = DateParser.parse(tripEndTime);
+  }
 
-    public void setTripEndTime(String tripEndTime) throws ParseException {
-        this.tripEndTime = parseFormat.parse(tripEndTime);
-    }
+  public String getVehicleID() {
+    return vehicleID;
+  }
 
-    public String getVehicleID() {
-        return vehicleID;
-    }
+  public void setVehicleID(String vehicleID) {
+    this.vehicleID = vehicleID;
+  }
 
-    public void setVehicleID(String vehicleID) {
-        this.vehicleID = vehicleID;
-    }
-
-    public ServiceDate getServiceDate() {
-        //FIXME: assumes JVM timezone is US/Eastern
-        return new ServiceDate(this.getTripStartTime());
-    }
+  public ServiceDate getServiceDate() {
+    // FIXME: assumes JVM timezone is US/Eastern
+    return new ServiceDate(this.getTripStartTime());
+  }
 }

@@ -16,49 +16,55 @@
  */
 package com.kurtraschke.wmatagtfsrealtime;
 
-import com.google.inject.AbstractModule;
-import com.google.inject.Module;
-import com.google.inject.name.Names;
-import java.util.Set;
-import net.sf.ehcache.Cache;
-import net.sf.ehcache.CacheManager;
 import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeExporterModule;
 import org.onebusaway.guice.jsr250.JSR250Module;
 
+import com.google.inject.AbstractModule;
+import com.google.inject.Module;
+import com.google.inject.name.Names;
+
+import net.sf.ehcache.Cache;
+import net.sf.ehcache.CacheManager;
+
+import java.util.Set;
+
 public class WMATARealtimeModule extends AbstractModule {
 
-    public static void addModuleAndDependencies(Set<Module> modules) {
-        modules.add(new WMATARealtimeModule());
-        GtfsRealtimeExporterModule.addModuleAndDependencies(modules);
-        JSR250Module.addModuleAndDependencies(modules);
-    }
+  public static void addModuleAndDependencies(Set<Module> modules) {
+    modules.add(new WMATARealtimeModule());
+    GtfsRealtimeExporterModule.addModuleAndDependencies(modules);
+    JSR250Module.addModuleAndDependencies(modules);
+  }
 
-    @Override
-    protected void configure() {
-        bind(CacheManager.class).toInstance(CacheManager.getInstance());
+  @Override
+  protected void configure() {
+    bind(CacheManager.class).toInstance(CacheManager.getInstance());
 
-        bind(Cache.class).annotatedWith(Names.named("caches.api")).toInstance(CacheManager.getInstance().getCache("wmataapi"));
-        bind(Cache.class).annotatedWith(Names.named("caches.trip")).toInstance(CacheManager.getInstance().getCache("wmatatrip"));
-        bind(Cache.class).annotatedWith(Names.named("caches.alertID")).toInstance(CacheManager.getInstance().getCache("wmataalertid"));
-    }
+    bind(Cache.class).annotatedWith(Names.named("caches.api")).toInstance(
+        CacheManager.getInstance().getCache("wmataapi"));
+    bind(Cache.class).annotatedWith(Names.named("caches.trip")).toInstance(
+        CacheManager.getInstance().getCache("wmatatrip"));
+    bind(Cache.class).annotatedWith(Names.named("caches.alertID")).toInstance(
+        CacheManager.getInstance().getCache("wmataalertid"));
+  }
 
-    /**
-     * Implement hashCode() and equals() such that two instances of the module
-     * will be equal.
-     */
-    @Override
-    public int hashCode() {
-        return this.getClass().hashCode();
-    }
+  /**
+   * Implement hashCode() and equals() such that two instances of the module
+   * will be equal.
+   */
+  @Override
+  public int hashCode() {
+    return this.getClass().hashCode();
+  }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null) {
-            return false;
-        }
-        return this.getClass().equals(o.getClass());
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
     }
+    if (o == null) {
+      return false;
+    }
+    return this.getClass().equals(o.getClass());
+  }
 }

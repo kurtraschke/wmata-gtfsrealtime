@@ -26,80 +26,81 @@ import java.util.List;
  */
 public class WMATAStop implements Serializable {
 
-    private static final long serialVersionUID = 1L;
-    private float lat;
-    private float lon;
-    private String name;
-    private String stopID;
-    private List<String> routes = new ArrayList<String>();
+  private static final long serialVersionUID = 1L;
+  private float lat;
+  private float lon;
+  private String name;
+  private String stopID;
+  private List<String> routes = new ArrayList<String>();
 
-    public float getLat() {
-        return lat;
-    }
+  public float getLat() {
+    return lat;
+  }
 
-    public void setLat(String lat) {
-        setLat(Float.parseFloat(lat));
-    }
+  public void setLat(String lat) {
+    setLat(Float.parseFloat(lat));
+  }
 
-    public void setLat(float lat) {
-        this.lat = lat;
-    }
+  public void setLat(float lat) {
+    this.lat = lat;
+  }
 
-    public float getLon() {
-        return lon;
-    }
+  public float getLon() {
+    return lon;
+  }
 
-    public void setLon(String lon) {
-        setLon(Float.parseFloat(lon));
-    }
+  public void setLon(String lon) {
+    setLon(Float.parseFloat(lon));
+  }
 
-    @Override
-    public int hashCode() {
-        int hash = 7;
-        hash = 17 * hash + (this.stopID != null ? this.stopID.hashCode() : 0);
-        return hash;
-    }
+  @Override
+  public int hashCode() {
+    int hash = 7;
+    hash = 17 * hash + (this.stopID != null ? this.stopID.hashCode() : 0);
+    return hash;
+  }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final WMATAStop other = (WMATAStop) obj;
-        if ((this.stopID == null) ? (other.stopID != null) : !this.stopID.equals(other.stopID)) {
-            return false;
-        }
-        return true;
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null) {
+      return false;
     }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    final WMATAStop other = (WMATAStop) obj;
+    if ((this.stopID == null) ? (other.stopID != null)
+        : !this.stopID.equals(other.stopID)) {
+      return false;
+    }
+    return true;
+  }
 
-    public void setLon(float lon) {
-        this.lon = lon;
-    }
+  public void setLon(float lon) {
+    this.lon = lon;
+  }
 
-    public String getName() {
-        return name;
-    }
+  public String getName() {
+    return name;
+  }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+  public void setName(String name) {
+    this.name = name;
+  }
 
-    public String getStopID() {
-        return stopID;
-    }
+  public String getStopID() {
+    return stopID;
+  }
 
-    public void setStopID(String stopID) {
-        this.stopID = stopID;
-    }
+  public void setStopID(String stopID) {
+    this.stopID = stopID;
+  }
 
-    public void addRoute(String route) {
-        routes.add(route);
-    }
+  public void addRoute(String route) {
+    routes.add(route);
+  }
 
-    public List<String> getRoutes() {
-        return routes;
-    }
+  public List<String> getRoutes() {
+    return routes;
+  }
 }

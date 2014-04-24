@@ -27,36 +27,36 @@ import java.util.Set;
  */
 public class WMATADirection implements Serializable {
 
-    private static final long serialVersionUID = 1L;
-    private int directionNum;
-    private List<WMATATrip> trips = new ArrayList<WMATATrip>();
+  private static final long serialVersionUID = 1L;
+  private int directionNum;
+  private List<WMATATrip> trips = new ArrayList<WMATATrip>();
 
-    public int getDirectionNum() {
-        return directionNum;
+  public int getDirectionNum() {
+    return directionNum;
+  }
+
+  public void setDirectionNum(int directionNum) {
+    this.directionNum = directionNum;
+  }
+
+  public List<WMATATrip> getTrips() {
+    return trips;
+  }
+
+  public void addTrip(WMATATrip trip) {
+    trips.add(trip);
+  }
+
+  public List<WMATAStop> getStops() {
+    Set<WMATAStop> stops = new HashSet<WMATAStop>();
+
+    for (WMATATrip t : trips) {
+
+      for (WMATAStopTime st : t.getStopTimes()) {
+        stops.add(st.getStop());
+      }
     }
+    return new ArrayList<WMATAStop>(stops);
 
-    public void setDirectionNum(int directionNum) {
-        this.directionNum = directionNum;
-    }
-
-    public List<WMATATrip> getTrips() {
-        return trips;
-    }
-
-    public void addTrip(WMATATrip trip) {
-        trips.add(trip);
-    }
-
-    public List<WMATAStop> getStops() {
-        Set<WMATAStop> stops = new HashSet<WMATAStop>();
-
-        for (WMATATrip t : trips) {
-
-            for (WMATAStopTime st : t.getStopTimes()) {
-                stops.add(st.getStop());
-            }
-        }
-        return new ArrayList<WMATAStop>(stops);
-
-    }
+  }
 }
