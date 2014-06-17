@@ -1,6 +1,6 @@
 /*
+ * Copyright (C) 2014 Kurt Raschke <kurt@kurtraschke.com>
  * Copyright (C) 2012 Google, Inc.
- * Copyright (C) 2013 Kurt Raschke
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -17,6 +17,8 @@
 package com.kurtraschke.wmatagtfsrealtime;
 
 import org.onebusaway.gtfs.model.AgencyAndId;
+import org.onebusaway.gtfs.model.StopTime;
+import org.onebusaway.gtfs.services.GtfsRelationalDao;
 import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeGuiceBindingTypes.Alerts;
 import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeGuiceBindingTypes.TripUpdates;
 import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeGuiceBindingTypes.VehiclePositions;
@@ -39,7 +41,6 @@ import com.google.transit.realtime.GtfsRealtime.VehicleDescriptor;
 import com.google.transit.realtime.GtfsRealtime.VehiclePosition;
 import com.kurtraschke.wmatagtfsrealtime.api.WMATAAlert;
 import com.kurtraschke.wmatagtfsrealtime.api.WMATABusPosition;
-import com.kurtraschke.wmatagtfsrealtime.api.WMATARoute;
 
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
@@ -50,7 +51,6 @@ import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -83,6 +83,7 @@ public class GTFSRealtimeProviderImpl {
   private WMATAAPIService _api;
   private WMATARouteMapperService _routeMapperService;
   private WMATATripMapperService _tripMapperService;
+  private GtfsDaoService _daoService;
   private CacheManager _cacheManager;
   private Cache _alertIDCache;
   private GtfsRealtimeSink _vehiclePositionsSink;
@@ -137,6 +138,11 @@ public class GTFSRealtimeProviderImpl {
   }
 
   @Inject
+  public void setGtfsDaoService(GtfsDaoService daoService) {
+    _daoService = daoService;
+  }
+
+  @Inject
   public void setCacheManager(CacheManager cacheManager) {
     _cacheManager = cacheManager;
   }
@@ -181,33 +187,18 @@ public class GTFSRealtimeProviderImpl {
     /**
      * We download the vehicle details as an array of objects.
      */
-    List<WMATABusPosition> allBusPositions = new ArrayList<WMATABusPosition>();
-
-    for (WMATARoute r : _api.downloadRouteList()) {
-      List<WMATABusPosition> busPositions = _api.downloadBusPositions(r.getRouteID());
-      allBusPositions.addAll(busPositions);
-    }
+    List<WMATABusPosition> allBusPositions = _api.downloadBusPositions();
 
     /**
      * We iterate over every vehicle object.
      */
     for (WMATABusPosition bp : allBusPositions) {
-      //checkConsistency(bp);
+      // checkConsistency(bp);
 
       if ((!lastUpdateByVehicle.containsKey(bp.getVehicleID()))
           || bp.getDateTime().after(lastUpdateByVehicle.get(bp.getVehicleID()))) {
         try {
-          ProcessedVehicleResponse pvr = processVehicle(bp);
-
-          GtfsRealtimeIncrementalUpdate tripUpdateUpdate = new GtfsRealtimeIncrementalUpdate();
-          tripUpdateUpdate.addUpdatedEntity(pvr.tripUpdateEntity.build());
-          _tripUpdatesSink.handleIncrementalUpdate(tripUpdateUpdate);
-
-          GtfsRealtimeIncrementalUpdate vehiclePositionUpdate = new GtfsRealtimeIncrementalUpdate();
-          vehiclePositionUpdate.addUpdatedEntity(pvr.vehiclePositionEntity.build());
-          _vehiclePositionsSink.handleIncrementalUpdate(vehiclePositionUpdate);
-
-          lastUpdateByVehicle.put(bp.getVehicleID(), bp.getDateTime());
+          processVehicle(bp);
 
         } catch (Exception e) {
           _log.warn(
@@ -246,10 +237,8 @@ public class GTFSRealtimeProviderImpl {
     }
   }
 
-  private ProcessedVehicleResponse processVehicle(WMATABusPosition bp)
-      throws IOException, SAXException {
-    ProcessedVehicleResponse pvr = new ProcessedVehicleResponse();
-
+  private void processVehicle(WMATABusPosition bp) throws IOException,
+      SAXException {
     String route = bp.getRouteID();
     String vehicle = bp.getVehicleID();
     Date dateTime = bp.getDateTime();
@@ -284,29 +273,36 @@ public class GTFSRealtimeProviderImpl {
 
     /**
      * To construct our TripUpdate, we create a stop-time arrival event for the
-     * next stop for the vehicle, with the specified arrival delay. We add the
+     * first stop for the vehicle, with the specified arrival delay. We add the
      * stop-time update to a TripUpdate builder, along with the trip and vehicle
      * descriptors.
      */
-    StopTimeEvent.Builder departure = StopTimeEvent.newBuilder();
-    departure.setDelay(Math.round(deviation * -60));
+    if (gtfsTripID != null) {
+      StopTimeEvent.Builder departure = StopTimeEvent.newBuilder();
+      // WMATA API is negative for delay, positive for early (in minutes)
+      // GTFS-realtime is positive for delay, negative for early (in seconds)
+      departure.setDelay(Math.round(deviation * -60));
 
-    StopTimeUpdate.Builder stopTimeUpdate = StopTimeUpdate.newBuilder();
-    stopTimeUpdate.setDeparture(departure);
-    stopTimeUpdate.setStopSequence(1);
+      StopTimeUpdate.Builder stopTimeUpdate = StopTimeUpdate.newBuilder();
+      stopTimeUpdate.setDeparture(departure);
+      setStopIdAndSequence(stopTimeUpdate, getFirstStopForTrip(gtfsTripID));
 
-    TripUpdate.Builder tripUpdate = TripUpdate.newBuilder();
-    tripUpdate.addStopTimeUpdate(stopTimeUpdate);
-    tripUpdate.setTrip(tripDescriptor);
-    tripUpdate.setVehicle(vehicleDescriptor);
-    /**
-     * Create a new feed entity to wrap the trip update and add it to the
-     * GTFS-realtime trip updates feed.
-     */
-    FeedEntity.Builder tripUpdateEntity = FeedEntity.newBuilder();
-    tripUpdateEntity.setId(vehicle);
-    tripUpdateEntity.setTripUpdate(tripUpdate);
-    pvr.tripUpdateEntity = tripUpdateEntity;
+      TripUpdate.Builder tripUpdate = TripUpdate.newBuilder();
+      tripUpdate.addStopTimeUpdate(stopTimeUpdate);
+      tripUpdate.setTrip(tripDescriptor);
+      tripUpdate.setVehicle(vehicleDescriptor);
+      /**
+       * Create a new feed entity to wrap the trip update and add it to the
+       * GTFS-realtime trip updates feed.
+       */
+      FeedEntity.Builder tripUpdateEntity = FeedEntity.newBuilder();
+      tripUpdateEntity.setId(vehicle);
+      tripUpdateEntity.setTripUpdate(tripUpdate);
+      GtfsRealtimeIncrementalUpdate tripUpdateUpdate = new GtfsRealtimeIncrementalUpdate();
+      tripUpdateUpdate.addUpdatedEntity(tripUpdateEntity.build());
+      _tripUpdatesSink.handleIncrementalUpdate(tripUpdateUpdate);
+    }
+
     /**
      * To construct our VehiclePosition, we create a position for the vehicle.
      * We add the position to a VehiclePosition builder, along with the trip and
@@ -329,9 +325,22 @@ public class GTFSRealtimeProviderImpl {
     FeedEntity.Builder vehiclePositionEntity = FeedEntity.newBuilder();
     vehiclePositionEntity.setId(vehicle);
     vehiclePositionEntity.setVehicle(vehiclePosition);
-    pvr.vehiclePositionEntity = vehiclePositionEntity;
 
-    return pvr;
+    GtfsRealtimeIncrementalUpdate vehiclePositionUpdate = new GtfsRealtimeIncrementalUpdate();
+    vehiclePositionUpdate.addUpdatedEntity(vehiclePositionEntity.build());
+    _vehiclePositionsSink.handleIncrementalUpdate(vehiclePositionUpdate);
+
+    lastUpdateByVehicle.put(bp.getVehicleID(), bp.getDateTime());
+  }
+
+  private StopTime getFirstStopForTrip(AgencyAndId tripId) {
+    GtfsRelationalDao dao = _daoService.getGtfsRelationalDao();
+    return dao.getStopTimesForTrip(dao.getTripForId(tripId)).get(0);
+  }
+
+  private void setStopIdAndSequence(StopTimeUpdate.Builder stu, StopTime st) {
+    stu.setStopId(st.getStop().getId().getId());
+    stu.setStopSequence(st.getStopSequence());
   }
 
   @SuppressWarnings("unchecked")
@@ -405,6 +414,7 @@ public class GTFSRealtimeProviderImpl {
    */
   private class VehiclesRefreshTask implements Runnable {
 
+    @Override
     public void run() {
       try {
         _log.info("Refreshing vehicles");
@@ -421,6 +431,7 @@ public class GTFSRealtimeProviderImpl {
    */
   private class AlertsRefreshTask implements Runnable {
 
+    @Override
     public void run() {
       try {
         _log.info("Refreshing alerts");

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2012 OneBusAway.
- * Copyright (C) 2012 Kurt Raschke
+ * Copyright (C) 2014 Kurt Raschke <kurt@kurtraschke.com>
+ * Copyright (C) 2012 OneBusAway
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -42,6 +42,9 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 /**
+ * FIXME: we are using a terribly old version of the Apache Commons Digester;
+ * it should be replaced with something more modern.
+ *
  *
  * @author kurt
  */
@@ -199,41 +202,41 @@ public class WMATAAPIService {
     busPositionDigester.addObjectCreate("BusPositionsResp/BusPositions",
         ArrayList.class);
     busPositionDigester.addObjectCreate(
-        "BusPositionsResp/BusPositions/BusPositions", WMATABusPosition.class);
+        "BusPositionsResp/BusPositions/BusPosition", WMATABusPosition.class);
     busPositionDigester.addCallMethod(
-        "BusPositionsResp/BusPositions/BusPositions/DateTime", "setDateTime", 0);
+        "BusPositionsResp/BusPositions/BusPosition/DateTime", "setDateTime", 0);
     busPositionDigester.addCallMethod(
-        "BusPositionsResp/BusPositions/BusPositions/Deviation", "setDeviation",
+        "BusPositionsResp/BusPositions/BusPosition/Deviation", "setDeviation",
         0);
     busPositionDigester.addCallMethod(
-        "BusPositionsResp/BusPositions/BusPositions/DirectionNum",
+        "BusPositionsResp/BusPositions/BusPosition/DirectionNum",
         "setDirectionNum", 0);
     busPositionDigester.addCallMethod(
-        "BusPositionsResp/BusPositions/BusPositions/DirectionText",
+        "BusPositionsResp/BusPositions/BusPosition/DirectionText",
         "setDirectionText", 0);
     busPositionDigester.addCallMethod(
-        "BusPositionsResp/BusPositions/BusPositions/Lat", "setLat", 0);
+        "BusPositionsResp/BusPositions/BusPosition/Lat", "setLat", 0);
     busPositionDigester.addCallMethod(
-        "BusPositionsResp/BusPositions/BusPositions/Lon", "setLon", 0);
+        "BusPositionsResp/BusPositions/BusPosition/Lon", "setLon", 0);
     busPositionDigester.addCallMethod(
-        "BusPositionsResp/BusPositions/BusPositions/RouteId", "setRouteID", 0);
+        "BusPositionsResp/BusPositions/BusPosition/RouteID", "setRouteID", 0);
     busPositionDigester.addCallMethod(
-        "BusPositionsResp/BusPositions/BusPositions/TripHeadsign",
+        "BusPositionsResp/BusPositions/BusPosition/TripHeadsign",
         "setTripHeadsign", 0);
     busPositionDigester.addCallMethod(
-        "BusPositionsResp/BusPositions/BusPositions/TripId", "setTripID", 0);
+        "BusPositionsResp/BusPositions/BusPosition/TripID", "setTripID", 0);
     busPositionDigester.addCallMethod(
-        "BusPositionsResp/BusPositions/BusPositions/TripStartTime",
+        "BusPositionsResp/BusPositions/BusPosition/TripStartTime",
         "setTripStartTime", 0);
     busPositionDigester.addCallMethod(
-        "BusPositionsResp/BusPositions/BusPositions/TripEndTime",
+        "BusPositionsResp/BusPositions/BusPosition/TripEndTime",
         "setTripEndTime", 0);
     busPositionDigester.addCallMethod(
-        "BusPositionsResp/BusPositions/BusPositions/VehicleId", "setVehicleID",
+        "BusPositionsResp/BusPositions/BusPosition/VehicleID", "setVehicleID",
         0);
 
-    busPositionDigester.addSetNext("BusPositionsResp/BusPositions/BusPositions",
-        "add");
+    busPositionDigester.addSetNext(
+        "BusPositionsResp/BusPositions/BusPosition", "add");
 
     return busPositionDigester;
   }
@@ -285,9 +288,16 @@ public class WMATAAPIService {
   }
 
   @SuppressWarnings("unchecked")
-  public List<WMATABusPosition> downloadBusPositions(String routeID)
+  public List<WMATABusPosition> downloadBusPositions() throws IOException,
+      SAXException {
+    String url = "http://api.wmata.com/Bus.svc/BusPositions?api_key=" + API_KEY;
+    return (List<WMATABusPosition>) digestUrl(url, false, _busPositionDigester);
+  }
+
+  @SuppressWarnings("unchecked")
+  public List<WMATABusPosition> downloadBusPositionsForRoute(String routeID)
       throws IOException, SAXException {
-    String url = "http://api.wmata.com/beta/Bus.svc/BusPositions?routeId="
+    String url = "http://api.wmata.com/Bus.svc/BusPositions?routeId="
         + URLEncoder.encode(routeID, "utf-8") + "&api_key=" + API_KEY;
     return (List<WMATABusPosition>) digestUrl(url, false, _busPositionDigester);
   }
