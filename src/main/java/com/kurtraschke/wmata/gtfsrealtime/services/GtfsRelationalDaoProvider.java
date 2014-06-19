@@ -13,60 +13,49 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package com.kurtraschke.wmatagtfsrealtime;
+
+package com.kurtraschke.wmata.gtfsrealtime.services;
 
 import org.onebusaway.gtfs.impl.GtfsRelationalDaoImpl;
-import org.onebusaway.gtfs.impl.calendar.CalendarServiceDataFactoryImpl;
-import org.onebusaway.gtfs.model.calendar.CalendarServiceData;
 import org.onebusaway.gtfs.serialization.GtfsReader;
-import org.onebusaway.gtfs.services.GtfsMutableRelationalDao;
 import org.onebusaway.gtfs.services.GtfsRelationalDao;
-import org.onebusaway.gtfs.services.calendar.CalendarServiceDataFactory;
+
+import com.google.inject.Provider;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 
-import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.inject.Singleton;
 
-/**
- *
- * @author kurt
- */
-@Singleton
-public class GtfsDaoService {
+public class GtfsRelationalDaoProvider implements Provider<GtfsRelationalDao> {
+
+  private static final Logger _log = LoggerFactory.getLogger(GtfsRelationalDaoProvider.class);
 
   private File _gtfsPath;
-  private GtfsMutableRelationalDao dao;
-  private CalendarServiceData csd;
-
-  public GtfsDaoService() {
-  }
 
   @Inject
   public void setGtfsPath(@Named("GTFS.path")
   File gtfsPath) {
-    this._gtfsPath = gtfsPath;
+    _gtfsPath = gtfsPath;
   }
 
-  public GtfsRelationalDao getGtfsRelationalDao() {
-    return dao;
-  }
-
-  public CalendarServiceData getCalendarServiceData() {
-    return csd;
-  }
-
-  @PostConstruct
-  public void start() throws IOException {
-    dao = new GtfsRelationalDaoImpl();
+  @Override
+  public GtfsRelationalDao get() {
+    _log.info("Loading GTFS from {}", _gtfsPath.toString());
+    GtfsRelationalDaoImpl dao = new GtfsRelationalDaoImpl();
     GtfsReader reader = new GtfsReader();
-    reader.setInputLocation(_gtfsPath);
     reader.setEntityStore(dao);
-    reader.run();
-    CalendarServiceDataFactory csdf = new CalendarServiceDataFactoryImpl(dao);
-    csd = csdf.createData();
+    try {
+      reader.setInputLocation(_gtfsPath);
+      reader.run();
+      reader.close();
+    } catch (IOException e) {
+      throw new RuntimeException("Failure while reading GTFS", e);
+    }
+    return dao;
   }
 }

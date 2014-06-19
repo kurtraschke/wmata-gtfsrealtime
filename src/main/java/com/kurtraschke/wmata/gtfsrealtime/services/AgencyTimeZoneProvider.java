@@ -13,19 +13,36 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
+package com.kurtraschke.wmata.gtfsrealtime.services;
 
-package com.kurtraschke.wmatagtfsrealtime;
+import org.onebusaway.gtfs.model.calendar.CalendarServiceData;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import com.google.inject.Provider;
+
 import java.util.TimeZone;
 
-public class DateParser {
-  public static Date parse(String date) throws ParseException {
-    SimpleDateFormat parseFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-    // FIXME: timezone should not be hardcoded
-    parseFormat.setTimeZone(TimeZone.getTimeZone("US/Eastern"));
-    return parseFormat.parse(date);
+import javax.inject.Inject;
+import javax.inject.Named;
+
+public class AgencyTimeZoneProvider implements Provider<TimeZone> {
+
+  private CalendarServiceData _csd;
+  private String _agencyId;
+
+  @Inject
+  public void setCalendarServiceData(CalendarServiceData csd) {
+    _csd = csd;
   }
+
+  @Inject
+  public void setAgencyId(@Named("WMATA.agencyID")
+  String agencyId) {
+    _agencyId = agencyId;
+  }
+
+  @Override
+  public TimeZone get() {
+    return _csd.getTimeZoneForAgencyId(_agencyId);
+  }
+
 }

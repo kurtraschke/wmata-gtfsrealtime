@@ -1,10 +1,12 @@
 WMATA.key=
+WMATA.rateLimit=3
 WMATA.agencyID=MET
 WMATA.badRoutes=B99,F99,F99c,F99v1,L99,P99,PATBL,PATFM,PATLA,PATMG,PATNO,PATRO,PATSH,PATSO,PATWN,PATWO,SH99
 WMATA.staticMappings=R99=REX\nR99v1=REX\nS80=TAGS\nS91=TAGS
 GTFS.path=
 refreshInterval.vehicles=30
 refreshInterval.alerts=60
+tripMapping.scoreLimit=1500
 
 tripUpdates.url=http://localhost:9000/tripUpdates
 vehiclePositions.url=http://localhost:9000/vehiclePositions

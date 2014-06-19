@@ -14,7 +14,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package com.kurtraschke.wmatagtfsrealtime;
+package com.kurtraschke.wmata.gtfsrealtime;
 
 import org.onebusaway.cli.CommandLineInterfaceLibrary;
 import org.onebusaway.cli.Daemonizer;
@@ -33,6 +33,7 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.ProvisionException;
 import com.google.inject.name.Names;
 
 import org.apache.commons.cli.CommandLine;
@@ -45,6 +46,7 @@ import org.nnsoft.guice.rocoto.configuration.ConfigurationModule;
 import org.nnsoft.guice.rocoto.converters.FileConverter;
 import org.nnsoft.guice.rocoto.converters.PropertiesConverter;
 import org.nnsoft.guice.rocoto.converters.URLConverter;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
@@ -54,7 +56,8 @@ import java.util.Set;
 
 public class WMATARealtimeMain {
 
-  private static final org.slf4j.Logger _log = LoggerFactory.getLogger(WMATARealtimeMain.class);
+  private static final Logger _log = LoggerFactory.getLogger(WMATARealtimeMain.class);
+
   private final String ARG_CONFIG_FILE = "config";
   private File _tripUpdatesPath;
   private URL _tripUpdatesUrl;
@@ -63,6 +66,7 @@ public class WMATARealtimeMain {
   private File _alertsPath;
   private URL _alertsUrl;
   private Injector _injector;
+  @SuppressWarnings("unused")
   private GTFSRealtimeProviderImpl _provider;
   private LifecycleService _lifecycleService;
   private GtfsRealtimeExporter _vehiclePositionsExporter;
@@ -74,8 +78,8 @@ public class WMATARealtimeMain {
     WMATARealtimeMain m = new WMATARealtimeMain();
     try {
       m.run(args);
-    } catch (CreationException e) {
-      e.printStackTrace(System.err);
+    } catch (CreationException|ConfigurationException|ProvisionException e) {
+      _log.error("Error in startup:", e);
       System.exit(-1);
     }
   }
@@ -121,7 +125,7 @@ public class WMATARealtimeMain {
     final CommandLine cli = parser.parse(options, args);
     Daemonizer.handleDaemonization(cli);
 
-    Set<Module> modules = new HashSet<Module>();
+    Set<Module> modules = new HashSet<>();
     WMATARealtimeModule.addModuleAndDependencies(modules);
 
     _injector = Guice.createInjector(new URLConverter(), new FileConverter(),

@@ -1,33 +1,14 @@
-/*
- * Copyright (C) 2013 Kurt Raschke
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-package com.kurtraschke.wmatagtfsrealtime.api;
+package com.kurtraschke.wmata.gtfsrealtime.api.buspositions;
 
 import org.onebusaway.gtfs.model.calendar.ServiceDate;
 
-import com.kurtraschke.wmatagtfsrealtime.DateParser;
+import com.kurtraschke.wmata.gtfsrealtime.DateTimeUtils;
 
 import java.io.Serializable;
 import java.text.ParseException;
 import java.util.Date;
 
-/**
- *
- * @author kurt
- */
-public class WMATABusPosition implements Serializable {
+public class BusPosition implements Serializable {
 
   private static final long serialVersionUID = 1L;
   private Date dateTime;
@@ -48,15 +29,11 @@ public class WMATABusPosition implements Serializable {
   }
 
   public void setDateTime(String dateTime) throws ParseException {
-    this.dateTime = DateParser.parse(dateTime);
+    this.dateTime = DateTimeUtils.parse(dateTime);
   }
 
   public float getDeviation() {
     return deviation;
-  }
-
-  public void setDeviation(String deviation) {
-    setDeviation(Float.parseFloat(deviation));
   }
 
   public void setDeviation(float deviation) {
@@ -65,11 +42,6 @@ public class WMATABusPosition implements Serializable {
 
   public int getDirectionNum() {
     return directionNum;
-  }
-
-  public void setDirectionNum(String directionNum) {
-    setDirectionNum(Integer.parseInt(directionNum));
-
   }
 
   public void setDirectionNum(int directionNum) {
@@ -88,21 +60,12 @@ public class WMATABusPosition implements Serializable {
     return lat;
   }
 
-  public void setLat(String lat) {
-    setLat(Float.parseFloat(lat));
-
-  }
-
   public void setLat(float lat) {
     this.lat = lat;
   }
 
   public float getLon() {
     return lon;
-  }
-
-  public void setLon(String lon) {
-    setLon(Float.parseFloat(lon));
   }
 
   public void setLon(float lon) {
@@ -138,7 +101,7 @@ public class WMATABusPosition implements Serializable {
   }
 
   public void setTripStartTime(String tripStartTime) throws ParseException {
-    this.tripStartTime = DateParser.parse(tripStartTime);
+    this.tripStartTime = DateTimeUtils.parse(tripStartTime);
   }
 
   public Date getTripEndTime() {
@@ -146,7 +109,7 @@ public class WMATABusPosition implements Serializable {
   }
 
   public void setTripEndTime(String tripEndTime) throws ParseException {
-    this.tripEndTime = DateParser.parse(tripEndTime);
+    this.tripEndTime = DateTimeUtils.parse(tripEndTime);
   }
 
   public String getVehicleID() {
@@ -158,7 +121,19 @@ public class WMATABusPosition implements Serializable {
   }
 
   public ServiceDate getServiceDate() {
-    // FIXME: assumes JVM timezone is US/Eastern
-    return new ServiceDate(this.getTripStartTime());
+    return DateTimeUtils.serviceDateFromDate(this.getTripStartTime());
   }
+
+  @Override
+  public String toString() {
+    return "BusPosition [dateTime=" + dateTime + ", deviation=" + deviation
+        + ", directionNum=" + directionNum + ", directionText=" + directionText
+        + ", lat=" + lat + ", lon=" + lon + ", routeID=" + routeID
+        + ", tripHeadsign=" + tripHeadsign + ", tripID=" + tripID
+        + ", tripStartTime=" + tripStartTime + ", tripEndTime=" + tripEndTime
+        + ", vehicleID=" + vehicleID + "]";
+  }
+
+
+
 }

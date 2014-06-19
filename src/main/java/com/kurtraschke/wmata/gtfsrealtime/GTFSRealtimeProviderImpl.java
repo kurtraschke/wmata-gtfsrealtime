@@ -14,7 +14,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package com.kurtraschke.wmatagtfsrealtime;
+package com.kurtraschke.wmata.gtfsrealtime;
 
 import org.onebusaway.gtfs.model.AgencyAndId;
 import org.onebusaway.gtfs.model.StopTime;
@@ -39,8 +39,11 @@ import com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeEvent;
 import com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeUpdate;
 import com.google.transit.realtime.GtfsRealtime.VehicleDescriptor;
 import com.google.transit.realtime.GtfsRealtime.VehiclePosition;
-import com.kurtraschke.wmatagtfsrealtime.api.WMATAAlert;
-import com.kurtraschke.wmatagtfsrealtime.api.WMATABusPosition;
+import com.kurtraschke.wmata.gtfsrealtime.api.alerts.Item;
+import com.kurtraschke.wmata.gtfsrealtime.api.buspositions.BusPosition;
+import com.kurtraschke.wmata.gtfsrealtime.services.WMATAAPIService;
+import com.kurtraschke.wmata.gtfsrealtime.services.WMATARouteMapperService;
+import com.kurtraschke.wmata.gtfsrealtime.services.WMATATripMapperService;
 
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
@@ -48,9 +51,7 @@ import net.sf.ehcache.Element;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xml.sax.SAXException;
 
-import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -79,29 +80,20 @@ import javax.inject.Singleton;
 public class GTFSRealtimeProviderImpl {
 
   private static final Logger _log = LoggerFactory.getLogger(GTFSRealtimeProviderImpl.class);
+
   private ScheduledExecutorService _executor;
   private WMATAAPIService _api;
   private WMATARouteMapperService _routeMapperService;
   private WMATATripMapperService _tripMapperService;
-  private GtfsDaoService _daoService;
   private CacheManager _cacheManager;
   private Cache _alertIDCache;
   private GtfsRealtimeSink _vehiclePositionsSink;
   private GtfsRealtimeSink _tripUpdatesSink;
   private GtfsRealtimeSink _alertsSink;
-  private Map<String, Date> lastUpdateByVehicle = new HashMap<String, Date>();
-  private Map<UUID, Date> lastUpdateByAlert = new HashMap<UUID, Date>();
-  /**
-   * How often vehicle data will be downloaded, in seconds.
-   */
-  @Inject
-  @Named("refreshInterval.vehicles")
+  private GtfsRelationalDao _dao;
+  private Map<String, Date> lastUpdateByVehicle = new HashMap<>();
+  private Map<UUID, Date> lastUpdateByAlert = new HashMap<>();
   private int _vehicleRefreshInterval;
-  /**
-   * How often alert data will be downloaded, in seconds.
-   */
-  @Inject
-  @Named("refreshInterval.alerts")
   private int _alertRefreshInterval;
 
   @Inject
@@ -123,6 +115,11 @@ public class GTFSRealtimeProviderImpl {
   }
 
   @Inject
+  public void setGtfsRelationalDao(GtfsRelationalDao dao) {
+    _dao = dao;
+  }
+
+  @Inject
   public void setWMATAAPIService(WMATAAPIService api) {
     _api = api;
   }
@@ -138,11 +135,6 @@ public class GTFSRealtimeProviderImpl {
   }
 
   @Inject
-  public void setGtfsDaoService(GtfsDaoService daoService) {
-    _daoService = daoService;
-  }
-
-  @Inject
   public void setCacheManager(CacheManager cacheManager) {
     _cacheManager = cacheManager;
   }
@@ -151,6 +143,18 @@ public class GTFSRealtimeProviderImpl {
   public void setAlertIDCache(@Named("caches.alertID")
   Cache alertIDCache) {
     _alertIDCache = alertIDCache;
+  }
+
+  @Inject
+  public void setVehicleRefreshInterval(@Named("refreshInterval.vehicles")
+  int vehicleRefreshInterval) {
+    _vehicleRefreshInterval = vehicleRefreshInterval;
+  }
+
+  @Inject
+  public void setAlertRefreshInterval(@Named("refreshInterval.alerts")
+  int alertRefreshInterval) {
+    _alertRefreshInterval = alertRefreshInterval;
   }
 
   /**
@@ -182,17 +186,19 @@ public class GTFSRealtimeProviderImpl {
    * This method downloads the latest vehicle data, processes each vehicle in
    * turn, and create a GTFS-realtime feed of trip updates and vehicle positions
    * as a result.
+   *
+   * @throws WMATAAPIException
    */
-  private void refreshVehicles() throws IOException, SAXException {
+  private void refreshVehicles() throws WMATAAPIException {
     /**
      * We download the vehicle details as an array of objects.
      */
-    List<WMATABusPosition> allBusPositions = _api.downloadBusPositions();
+    List<BusPosition> busPositions = _api.downloadBusPositions().getBusPositions();
 
     /**
      * We iterate over every vehicle object.
      */
-    for (WMATABusPosition bp : allBusPositions) {
+    for (BusPosition bp : busPositions) {
       // checkConsistency(bp);
 
       if ((!lastUpdateByVehicle.containsKey(bp.getVehicleID()))
@@ -209,10 +215,10 @@ public class GTFSRealtimeProviderImpl {
       }
     }
 
-    _log.info("vehicles extracted: " + allBusPositions.size());
+    _log.info("vehicles extracted: " + busPositions.size());
   }
 
-  private void checkConsistency(WMATABusPosition bp) {
+  private void checkConsistency(BusPosition bp) {
     boolean endAfterStart;
     boolean timestampWithinTrip;
 
@@ -237,8 +243,7 @@ public class GTFSRealtimeProviderImpl {
     }
   }
 
-  private void processVehicle(WMATABusPosition bp) throws IOException,
-      SAXException {
+  private void processVehicle(BusPosition bp) throws WMATAAPIException {
     String route = bp.getRouteID();
     String vehicle = bp.getVehicleID();
     Date dateTime = bp.getDateTime();
@@ -334,8 +339,7 @@ public class GTFSRealtimeProviderImpl {
   }
 
   private StopTime getFirstStopForTrip(AgencyAndId tripId) {
-    GtfsRelationalDao dao = _daoService.getGtfsRelationalDao();
-    return dao.getStopTimesForTrip(dao.getTripForId(tripId)).get(0);
+    return _dao.getStopTimesForTrip(_dao.getTripForId(tripId)).get(0);
   }
 
   private void setStopIdAndSequence(StopTimeUpdate.Builder stu, StopTime st) {
@@ -343,14 +347,13 @@ public class GTFSRealtimeProviderImpl {
     stu.setStopSequence(st.getStopSequence());
   }
 
-  @SuppressWarnings("unchecked")
-  private void refreshAlerts() throws IOException, SAXException {
-    List<WMATAAlert> busAlerts = _api.downloadBusAlerts();
-    List<WMATAAlert> railAlerts = _api.downloadRailAlerts();
+  private void refreshAlerts() throws WMATAAPIException {
+    List<Item> busAlerts = _api.downloadBusAlerts().getChannel().getItems();
+    List<Item> railAlerts = _api.downloadRailAlerts().getChannel().getItems();
 
-    Set<UUID> currentAlertIDs = new HashSet<UUID>();
+    Set<UUID> currentAlertIDs = new HashSet<>();
 
-    for (WMATAAlert theAlert : Iterables.concat(busAlerts, railAlerts)) {
+    for (Item theAlert : Iterables.concat(busAlerts, railAlerts)) {
       if ((!lastUpdateByAlert.containsKey(theAlert.getGuid()))
           || theAlert.getPubDate().after(
               lastUpdateByAlert.get(theAlert.getGuid()))) {
@@ -391,6 +394,7 @@ public class GTFSRealtimeProviderImpl {
      */
     _alertIDCache.flush();
 
+    @SuppressWarnings("unchecked")
     ImmutableSet<UUID> allAlertIDs = ImmutableSet.copyOf(_alertIDCache.getKeysWithExpiryCheck());
 
     /*
@@ -440,11 +444,5 @@ public class GTFSRealtimeProviderImpl {
         _log.warn("Error in alert refresh task", ex);
       }
     }
-  }
-
-  private class ProcessedVehicleResponse {
-
-    FeedEntity.Builder tripUpdateEntity;
-    FeedEntity.Builder vehiclePositionEntity;
   }
 }
