@@ -13,10 +13,10 @@ Build with Maven:
 Running
 -------
 
-Copy config.sample to config, and edit to set values for `WMATA.key` and `GTFS.path`.  You may also need to update `WMATA.agencyID`, `WMATA.badRoutes` and `WMATA.staticMappings`, but the defaults should be fine.
+Copy `config.sample` to `config`, and edit to set values for `WMATA.key` and `GTFS.path`.  You may also need to update `WMATA.agencyID`, `WMATA.badRoutes` and `WMATA.staticMappings`, but the defaults should be fine.
 
 Then, run with:
 
 `java -jar target/wmata-gtfsrealtime-1.0-SNAPSHOT-withAllDependencies.jar --config config`
 
-Visit http://localhost:9000/tripUpdates?debug to view the generated feed.
+Visit `http://localhost:9000/tripUpdates?debug` to view the generated feed.
