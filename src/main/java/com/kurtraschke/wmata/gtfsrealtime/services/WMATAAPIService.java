@@ -58,6 +58,7 @@ import javax.inject.Singleton;
 public class WMATAAPIService {
 
   private static final Logger _log = LoggerFactory.getLogger(WMATAAPIService.class);
+  private static final String API_KEY_PARAM_NAME = "subscription-key";
 
   private String _apiKey;
   private double _apiRateLimit;
@@ -108,7 +109,7 @@ public class WMATAAPIService {
   public Routes downloadRouteList() throws WMATAAPIException {
     try {
       URIBuilder b = new URIBuilder("http://api.wmata.com/Bus.svc/json/JRoutes");
-      b.addParameter("api_key", _apiKey);
+      b.addParameter(API_KEY_PARAM_NAME, _apiKey);
 
       return mapUrl(b.build(), true, Routes.class, _jsonMapper);
     } catch (Exception e) {
@@ -121,7 +122,7 @@ public class WMATAAPIService {
     try {
       URIBuilder b = new URIBuilder(
           "http://api.wmata.com/Bus.svc/json/JRouteSchedule");
-      b.addParameter("api_key", _apiKey);
+      b.addParameter(API_KEY_PARAM_NAME, _apiKey);
       b.addParameter("includeVariations", "false");
       b.addParameter("date", date);
       b.addParameter("routeID", routeId);
@@ -136,7 +137,7 @@ public class WMATAAPIService {
     try {
       URIBuilder b = new URIBuilder(
           "http://api.wmata.com/Bus.svc/json/JBusPositions");
-      b.addParameter("api_key", _apiKey);
+      b.addParameter(API_KEY_PARAM_NAME, _apiKey);
 
       return mapUrl(b.build(), false, BusPositions.class, _jsonMapper);
     } catch (Exception e) {
