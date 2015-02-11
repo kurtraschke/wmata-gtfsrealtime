@@ -273,9 +273,9 @@ public class GTFSRealtimeProviderImpl {
      * descriptors.
      */
     if (gtfsTripID != null) {
-      // WMATA API is negative for delay, positive for early (in minutes)
+      // WMATA API is positive for delay, negative for early (in minutes)
       // GTFS-realtime is positive for delay, negative for early (in seconds)
-      int delay = Math.round(deviation * -60);
+      int delay = Math.round(deviation * 60);
 
       TripUpdate.Builder tripUpdate = TripUpdate.newBuilder();
       tripUpdate.setDelay(delay);
