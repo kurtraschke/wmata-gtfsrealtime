@@ -1,7 +1,7 @@
 wmata-gtfsrealtime
 ==================
 
-GTFS-realtime StopTimeUpdate, VehiclePosition, and Alert feeds for WMATA.  The StopTimeUpdate and VehiclePosition feeds are produced using WMATA's [BusPositions API](http://developer.wmata.com/docs/read/GetBusPositions), while the Alert feed uses RSS feeds from [MetroAlerts](http://www.wmata.com/rider_tools/metro_service_status/rail_bus.cfm?).
+GTFS-realtime TripUpdate, VehiclePosition, and Alert feeds for WMATA.  The TripUpdate and VehiclePosition feeds are produced using WMATA's [BusPositions API](https://developer.wmata.com/docs/services/54763629281d83086473f231/operations/5476362a281d830c946a3d68), while the Alert feed uses RSS feeds from [MetroAlerts](http://www.wmata.com/rider_tools/metro_service_status/rail_bus.cfm?).
 
 Building
 --------

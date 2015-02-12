@@ -17,8 +17,6 @@
 package com.kurtraschke.wmata.gtfsrealtime;
 
 import org.onebusaway.gtfs.model.AgencyAndId;
-import org.onebusaway.gtfs.model.StopTime;
-import org.onebusaway.gtfs.services.GtfsRelationalDao;
 import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeGuiceBindingTypes.Alerts;
 import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeGuiceBindingTypes.TripUpdates;
 import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeGuiceBindingTypes.VehiclePositions;
@@ -35,8 +33,6 @@ import com.google.transit.realtime.GtfsRealtime.FeedEntity;
 import com.google.transit.realtime.GtfsRealtime.Position;
 import com.google.transit.realtime.GtfsRealtime.TripDescriptor;
 import com.google.transit.realtime.GtfsRealtime.TripUpdate;
-import com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeEvent;
-import com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeUpdate;
 import com.google.transit.realtime.GtfsRealtime.VehicleDescriptor;
 import com.google.transit.realtime.GtfsRealtime.VehiclePosition;
 import com.kurtraschke.wmata.gtfsrealtime.api.alerts.Item;
@@ -90,7 +86,6 @@ public class GTFSRealtimeProviderImpl {
   private GtfsRealtimeSink _vehiclePositionsSink;
   private GtfsRealtimeSink _tripUpdatesSink;
   private GtfsRealtimeSink _alertsSink;
-  private GtfsRelationalDao _dao;
   private Map<String, Date> lastUpdateByVehicle = new HashMap<>();
   private Map<UUID, Date> lastUpdateByAlert = new HashMap<>();
   private int _vehicleRefreshInterval;
@@ -112,11 +107,6 @@ public class GTFSRealtimeProviderImpl {
   public void setAlertsSink(@Alerts
   GtfsRealtimeSink sink) {
     _alertsSink = sink;
-  }
-
-  @Inject
-  public void setGtfsRelationalDao(GtfsRelationalDao dao) {
-    _dao = dao;
   }
 
   @Inject
@@ -283,17 +273,12 @@ public class GTFSRealtimeProviderImpl {
      * descriptors.
      */
     if (gtfsTripID != null) {
-      StopTimeEvent.Builder departure = StopTimeEvent.newBuilder();
-      // WMATA API is negative for delay, positive for early (in minutes)
+      // WMATA API is positive for delay, negative for early (in minutes)
       // GTFS-realtime is positive for delay, negative for early (in seconds)
-      departure.setDelay(Math.round(deviation * -60));
-
-      StopTimeUpdate.Builder stopTimeUpdate = StopTimeUpdate.newBuilder();
-      stopTimeUpdate.setDeparture(departure);
-      setStopIdAndSequence(stopTimeUpdate, getFirstStopForTrip(gtfsTripID));
+      int delay = Math.round(deviation * 60);
 
       TripUpdate.Builder tripUpdate = TripUpdate.newBuilder();
-      tripUpdate.addStopTimeUpdate(stopTimeUpdate);
+      tripUpdate.setDelay(delay);
       tripUpdate.setTrip(tripDescriptor);
       tripUpdate.setVehicle(vehicleDescriptor);
       /**
@@ -336,15 +321,6 @@ public class GTFSRealtimeProviderImpl {
     _vehiclePositionsSink.handleIncrementalUpdate(vehiclePositionUpdate);
 
     lastUpdateByVehicle.put(bp.getVehicleID(), bp.getDateTime());
-  }
-
-  private StopTime getFirstStopForTrip(AgencyAndId tripId) {
-    return _dao.getStopTimesForTrip(_dao.getTripForId(tripId)).get(0);
-  }
-
-  private void setStopIdAndSequence(StopTimeUpdate.Builder stu, StopTime st) {
-    stu.setStopId(st.getStop().getId().getId());
-    stu.setStopSequence(st.getStopSequence());
   }
 
   private void refreshAlerts() throws WMATAAPIException {
