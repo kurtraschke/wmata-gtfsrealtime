@@ -58,7 +58,7 @@ import javax.inject.Singleton;
 public class WMATAAPIService {
 
   private static final Logger _log = LoggerFactory.getLogger(WMATAAPIService.class);
-  private static final String API_KEY_PARAM_NAME = "subscription-key";
+  private static final String API_KEY_PARAM_NAME = "api_key";
 
   private String _apiKey;
   private double _apiRateLimit;
