@@ -108,7 +108,7 @@ public class WMATARouteMapperService {
     }
 
     String[] railRoutes = new String[] {
-        "RED", "ORANGE", "YELLOW", "GREEN", "BLUE"}; //FIXME: avoid hardcoding
+        "RED", "ORANGE", "YELLOW", "GREEN", "BLUE", "SILVER"}; //FIXME: avoid hardcoding
 
     for (String r : railRoutes) {
       AgencyAndId mapResult = mapRailRoute(r);

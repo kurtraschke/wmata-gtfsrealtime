@@ -18,7 +18,6 @@ package com.kurtraschke.wmata.gtfsrealtime;
 
 import org.onebusaway.gtfs.model.calendar.CalendarServiceData;
 import org.onebusaway.gtfs.services.GtfsRelationalDao;
-import org.onebusaway.gtfs_realtime.exporter.GtfsRealtimeExporterModule;
 import org.onebusaway.guice.jsr250.JSR250Module;
 
 import com.google.inject.AbstractModule;
@@ -28,6 +27,8 @@ import com.google.inject.name.Names;
 import com.kurtraschke.wmata.gtfsrealtime.services.AgencyTimeZoneProvider;
 import com.kurtraschke.wmata.gtfsrealtime.services.CalendarServiceDataProvider;
 import com.kurtraschke.wmata.gtfsrealtime.services.GtfsRelationalDaoProvider;
+
+import org.onebusway.gtfs_realtime.exporter.GtfsRealtimeExporterModule;
 
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;

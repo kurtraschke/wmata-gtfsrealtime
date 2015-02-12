@@ -34,6 +34,11 @@
     </dependency>
     <dependency>
       <groupId>org.onebusaway</groupId>
+      <artifactId>onebusaway-gtfs-realtime-api</artifactId>
+      <version>1.2.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.onebusaway</groupId>
       <artifactId>onebusaway-guice-jsr250</artifactId>
       <version>1.0.2</version>
       <!-- We want to use a newer version of slf4j than what this dependency 
